@@ -1,0 +1,88 @@
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { LogOut, LayoutDashboard, Printer, BarChart3, FolderUp } from "lucide-react";
+import AdminDashboard from "@/components/admin/AdminDashboard";
+import AdminPrinting from "@/components/admin/AdminPrinting";
+import AdminDistribution from "@/components/admin/AdminDistribution";
+import AdminDocuments from "@/components/admin/AdminDocuments";
+
+const tabs = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "impressao", label: "Impressão", icon: Printer },
+  { id: "distribuicao", label: "Distribuição", icon: BarChart3 },
+  { id: "documentos", label: "Documentos", icon: FolderUp },
+] as const;
+
+type TabId = (typeof tabs)[number]["id"];
+
+const AdminArea: React.FC = () => {
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  return (
+    <div className="min-h-screen bg-secondary">
+      {/* Header */}
+      <div className="bg-primary px-4 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-primary-foreground font-bold text-lg tracking-tight">
+            Painel Administrativo
+          </h1>
+          <p className="text-primary-foreground/70 text-sm">Patrimônio CCB Digital</p>
+        </div>
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={handleLogout}
+          className="text-primary-foreground/80 hover:text-primary-foreground p-2"
+        >
+          <LogOut className="w-5 h-5" />
+        </motion.button>
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-background border-b border-border overflow-x-auto">
+        <div className="max-w-[800px] mx-auto flex">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex-1 min-w-0 flex flex-col items-center gap-1 py-3 px-2 text-xs font-semibold transition-colors relative ${
+                  isActive ? "text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="truncate">{tab.label}</span>
+                {isActive && (
+                  <motion.div
+                    layoutId="tab-indicator"
+                    className="absolute bottom-0 left-2 right-2 h-[3px] bg-primary rounded-t-full"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="max-w-[800px] mx-auto p-4">
+        {activeTab === "dashboard" && <AdminDashboard />}
+        {activeTab === "impressao" && <AdminPrinting />}
+        {activeTab === "distribuicao" && <AdminDistribution />}
+        {activeTab === "documentos" && <AdminDocuments />}
+      </div>
+    </div>
+  );
+};
+
+export default AdminArea;
