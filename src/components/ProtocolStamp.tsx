@@ -14,7 +14,7 @@ const ProtocolStamp: React.FC<ProtocolStampProps> = ({ protocolo }) => {
       className="inline-block mx-auto"
     >
       <div className="relative border-4 border-primary rounded-2xl px-8 py-6">
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-background px-3">
+        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-card px-3">
           <span className="text-xs font-bold text-primary uppercase tracking-widest">
             Protocolo
           </span>
@@ -22,7 +22,7 @@ const ProtocolStamp: React.FC<ProtocolStampProps> = ({ protocolo }) => {
         <p className="text-2xl font-bold text-primary tabular-nums tracking-wide">
           {protocolo}
         </p>
-        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-background px-3">
+        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-card px-3">
           <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">
             CCB Digital
           </span>

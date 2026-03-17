@@ -22,12 +22,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem("ccb_role", "admin");
       return true;
     }
-    // Any other credentials log in as user
-    if (username.trim() && password.trim()) {
-      setRole("user");
-      localStorage.setItem("ccb_role", "user");
-      return true;
-    }
     return false;
   }, []);
 

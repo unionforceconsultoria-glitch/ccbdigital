@@ -1,14 +1,12 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { igrejas, tiposFormulario } from "@/data/churches";
 import { adicionarEnvio, getDocumentosAdmin } from "@/lib/storage";
-import { Camera, Upload, FileText, CheckCircle2, LogOut, Download, ChevronDown } from "lucide-react";
+import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 
 const UserArea: React.FC = () => {
-  const { logout } = useAuth();
   const navigate = useNavigate();
 
   const [igrejaId, setIgrejaId] = useState("");
@@ -61,13 +59,8 @@ const UserArea: React.FC = () => {
     setError("");
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
-
   return (
-    <div className="min-h-screen bg-secondary">
+    <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="bg-primary px-4 py-4 flex items-center justify-between">
         <div>
@@ -78,10 +71,11 @@ const UserArea: React.FC = () => {
         </div>
         <motion.button
           whileTap={{ scale: 0.96 }}
-          onClick={handleLogout}
-          className="text-primary-foreground/80 hover:text-primary-foreground p-2"
+          onClick={() => navigate("/admin/login")}
+          className="text-primary-foreground/70 hover:text-primary-foreground p-2 flex items-center gap-1 text-xs font-medium"
+          title="Acesso Administrativo"
         >
-          <LogOut className="w-5 h-5" />
+          <Shield className="w-5 h-5" />
         </motion.button>
       </div>
 
@@ -93,7 +87,7 @@ const UserArea: React.FC = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="bg-background rounded-2xl card-shadow p-8 text-center"
+              className="bg-card rounded-2xl card-shadow p-8 text-center"
             >
               <motion.div
                 initial={{ scale: 0 }}
@@ -114,7 +108,7 @@ const UserArea: React.FC = () => {
               <motion.button
                 whileTap={{ scale: 0.96 }}
                 onClick={resetForm}
-                className="w-full touch-target bg-accent text-accent-foreground font-bold rounded-xl text-base mt-6 transition-all hover:brightness-105"
+                className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-base mt-6 transition-all hover:brightness-110"
               >
                 ENVIAR OUTRO DOCUMENTO
               </motion.button>
@@ -126,7 +120,7 @@ const UserArea: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
               onSubmit={handleSubmit}
-              className="bg-background rounded-2xl card-shadow p-6 space-y-4"
+              className="bg-card rounded-2xl card-shadow p-6 space-y-4"
             >
               <h2 className="text-lg font-bold text-primary">Enviar Documento</h2>
               <p className="text-muted-foreground text-sm">
@@ -252,7 +246,7 @@ const UserArea: React.FC = () => {
               <motion.button
                 type="submit"
                 whileTap={{ scale: 0.96 }}
-                className="w-full touch-target bg-accent text-accent-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 transition-all hover:brightness-105"
+                className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 transition-all hover:brightness-110"
               >
                 <Upload className="w-5 h-5" />
                 ENVIAR DOCUMENTO
@@ -263,7 +257,7 @@ const UserArea: React.FC = () => {
 
         {/* Documentos Disponíveis */}
         {documentosAdmin.length > 0 && (
-          <div className="bg-background rounded-2xl card-shadow p-6">
+          <div className="bg-card rounded-2xl card-shadow p-6">
             <h2 className="text-lg font-bold text-primary mb-4">Documentos Disponíveis</h2>
             <div className="space-y-2">
               {documentosAdmin.map((doc) => (

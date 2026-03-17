@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
-import { LogIn, Eye, EyeOff } from "lucide-react";
+import { LogIn, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState("");
@@ -21,11 +21,7 @@ const Login: React.FC = () => {
     }
     const success = login(username, password);
     if (success) {
-      if (username === "Admin") {
-        navigate("/admin");
-      } else {
-        navigate("/usuario");
-      }
+      navigate("/admin");
     } else {
       setError("Credenciais inválidas.");
     }
@@ -37,27 +33,34 @@ const Login: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-        className="w-full max-w-[420px] bg-background rounded-2xl card-shadow p-8"
+        className="w-full max-w-[420px] bg-card rounded-2xl card-shadow p-8"
       >
+        {/* Back */}
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar
+        </button>
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
             <span className="text-primary-foreground font-bold text-2xl">CCB</span>
           </div>
           <h1 className="text-2xl font-bold text-primary tracking-tight">
-            Patrimônio CCB Digital
+            Acesso Administrativo
           </h1>
           <p className="text-muted-foreground mt-2 text-base">
-            Gestão de Documentos
+            Patrimônio CCB Digital
           </p>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-2">
-              Usuário
-            </label>
+            <label className="block text-sm font-semibold text-foreground mb-2">Usuário</label>
             <input
               type="text"
               value={username}
@@ -68,9 +71,7 @@ const Login: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-2">
-              Senha
-            </label>
+            <label className="block text-sm font-semibold text-foreground mb-2">Senha</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -90,11 +91,7 @@ const Login: React.FC = () => {
           </div>
 
           {error && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-destructive text-sm font-medium text-center"
-            >
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-destructive text-sm font-medium text-center">
               {error}
             </motion.p>
           )}
@@ -102,16 +99,12 @@ const Login: React.FC = () => {
           <motion.button
             type="submit"
             whileTap={{ scale: 0.96 }}
-            className="w-full touch-target bg-accent text-accent-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 mt-6 transition-all hover:brightness-105"
+            className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 mt-6 transition-all hover:brightness-110"
           >
             <LogIn className="w-5 h-5" />
             ENTRAR
           </motion.button>
         </form>
-
-        <p className="text-muted-foreground text-xs text-center mt-6">
-          Sistema interno — Acesso restrito
-        </p>
       </motion.div>
     </div>
   );

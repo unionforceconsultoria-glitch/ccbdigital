@@ -3,20 +3,16 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import Login from "./pages/Login";
 import UserArea from "./pages/UserArea";
 import AdminArea from "./pages/AdminArea";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode; requiredRole?: "admin" | "user" }> = ({
-  children,
-  requiredRole,
-}) => {
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, role } = useAuth();
-  if (!isAuthenticated) return <Navigate to="/" replace />;
-  if (requiredRole && role !== requiredRole) return <Navigate to="/" replace />;
+  if (!isAuthenticated || role !== "admin") return <Navigate to="/admin/login" replace />;
   return <>{children}</>;
 };
 
@@ -27,21 +23,14 @@ const App = () => (
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Login />} />
-            <Route
-              path="/usuario"
-              element={
-                <ProtectedRoute>
-                  <UserArea />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/" element={<UserArea />} />
+            <Route path="/admin/login" element={<Login />} />
             <Route
               path="/admin"
               element={
-                <ProtectedRoute requiredRole="admin">
+                <AdminRoute>
                   <AdminArea />
-                </ProtectedRoute>
+                </AdminRoute>
               }
             />
             <Route path="*" element={<NotFound />} />
