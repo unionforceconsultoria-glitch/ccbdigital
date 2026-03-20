@@ -33,6 +33,7 @@ const UserArea: React.FC = () => {
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
