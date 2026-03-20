@@ -63,6 +63,7 @@ const UserArea: React.FC = () => {
       nome_responsavel: nomeResponsavel.trim(),
       arquivo_nome: arquivo.name,
       arquivo_url: URL.createObjectURL(arquivo),
+      mes_referencia: `${currentYear}-${mesReferencia}`,
     });
 
     setProtocolo(envio.protocolo);
