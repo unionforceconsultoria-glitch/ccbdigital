@@ -97,3 +97,8 @@ export function removerDocumentoAdmin(id: string) {
   const docs = getDocumentosAdmin().filter((d) => d.id !== id);
   localStorage.setItem(DOCS_KEY, JSON.stringify(docs));
 }
+
+export function removerEnvio(id: string) {
+  const envios = getEnvios().filter((e) => e.id !== id);
+  saveEnvios(envios);
+}

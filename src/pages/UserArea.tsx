@@ -6,12 +6,30 @@ import { adicionarEnvio, getDocumentosAdmin } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 
+const meses = [
+  { value: "01", label: "Janeiro" },
+  { value: "02", label: "Fevereiro" },
+  { value: "03", label: "Março" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Maio" },
+  { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
+];
+
 const UserArea: React.FC = () => {
   const navigate = useNavigate();
+  const currentYear = new Date().getFullYear();
+  const currentMonth = String(new Date().getMonth() + 1).padStart(2, "0");
 
   const [igrejaId, setIgrejaId] = useState("");
   const [tipoFormulario, setTipoFormulario] = useState("");
   const [nomeResponsavel, setNomeResponsavel] = useState("");
+  const [mesReferencia, setMesReferencia] = useState(currentMonth);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
