@@ -31,10 +31,12 @@ const AdminDocuments: React.FC = () => {
     }
     adicionarDocumentoAdmin({
       nome: nome.trim(),
+      categoria: categoria || "Outro",
       arquivo_url: URL.createObjectURL(arquivo),
     });
     setDocs(getDocumentosAdmin());
     setNome("");
+    setCategoria("");
     setArquivo(null);
   };
 
