@@ -2,14 +2,16 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogOut, LayoutDashboard, Printer, BarChart3, FolderUp } from "lucide-react";
+import { LogOut, LayoutDashboard, Printer, BarChart3, FolderUp, FolderOpen } from "lucide-react";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminPrinting from "@/components/admin/AdminPrinting";
 import AdminDistribution from "@/components/admin/AdminDistribution";
 import AdminDocuments from "@/components/admin/AdminDocuments";
+import AdminFileManager from "@/components/admin/AdminFileManager";
 
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "arquivos", label: "Arquivos", icon: FolderOpen },
   { id: "impressao", label: "Impressão", icon: Printer },
   { id: "distribuicao", label: "Distribuição", icon: BarChart3 },
   { id: "documentos", label: "Documentos", icon: FolderUp },
