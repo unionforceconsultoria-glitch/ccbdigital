@@ -33,6 +33,7 @@ const UserArea: React.FC = () => {
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
@@ -296,29 +297,75 @@ const UserArea: React.FC = () => {
           )}
         </AnimatePresence>
 
-        {/* Documentos Disponíveis */}
+        {/* Baixar Formulários */}
         {documentosAdmin.length > 0 && (
           <div className="bg-card rounded-2xl card-shadow p-6">
-            <h2 className="text-lg font-bold text-primary mb-4">Documentos Disponíveis</h2>
-            <div className="space-y-2">
-              {documentosAdmin.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between bg-secondary rounded-xl px-4 py-3"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <FileText className="w-5 h-5 text-primary shrink-0" />
-                    <span className="text-sm font-medium truncate">{doc.nome}</span>
-                  </div>
-                  <a
-                    href={doc.arquivo_url}
-                    download={doc.nome}
-                    className="text-primary hover:text-primary/80 shrink-0"
+            <h2 className="text-lg font-bold text-primary mb-3 flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              Baixar Formulários
+            </h2>
+            <p className="text-muted-foreground text-sm mb-3">
+              Selecione a categoria para filtrar os documentos disponíveis.
+            </p>
+
+            {/* Filtro por categoria */}
+            {(() => {
+              const categorias = [...new Set(documentosAdmin.map((d) => d.categoria).filter(Boolean))];
+              return categorias.length > 0 ? (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <button
+                    onClick={() => setCategoriaFiltro("")}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      categoriaFiltro === ""
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-foreground hover:bg-muted"
+                    }`}
                   >
-                    <Download className="w-5 h-5" />
-                  </a>
+                    Todos
+                  </button>
+                  {categorias.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCategoriaFiltro(cat)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                        categoriaFiltro === cat
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
                 </div>
-              ))}
+              ) : null;
+            })()}
+
+            <div className="space-y-2">
+              {documentosAdmin
+                .filter((doc) => !categoriaFiltro || doc.categoria === categoriaFiltro)
+                .map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between bg-secondary rounded-xl px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileText className="w-5 h-5 text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <span className="text-sm font-medium truncate block">{doc.nome}</span>
+                        {doc.categoria && (
+                          <span className="text-xs text-muted-foreground">{doc.categoria}</span>
+                        )}
+                      </div>
+                    </div>
+                    <a
+                      href={doc.arquivo_url}
+                      download={doc.nome}
+                      className="text-primary hover:text-primary/80 shrink-0"
+                    >
+                      <Download className="w-5 h-5" />
+                    </a>
+                  </div>
+                ))}
             </div>
           </div>
         )}

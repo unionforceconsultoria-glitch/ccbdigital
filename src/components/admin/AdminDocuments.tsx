@@ -5,11 +5,20 @@ import {
   getDocumentosAdmin,
   removerDocumentoAdmin,
 } from "@/lib/storage";
-import { Upload, FileText, Trash2, FolderUp } from "lucide-react";
+import { Upload, FileText, Trash2, FolderUp, ChevronDown } from "lucide-react";
+
+const categorias = [
+  "Formulário Mensal",
+  "Relatório",
+  "Modelo / Template",
+  "Circular",
+  "Outro",
+];
 
 const AdminDocuments: React.FC = () => {
   const [docs, setDocs] = useState(getDocumentosAdmin());
   const [nome, setNome] = useState("");
+  const [categoria, setCategoria] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -22,10 +31,12 @@ const AdminDocuments: React.FC = () => {
     }
     adicionarDocumentoAdmin({
       nome: nome.trim(),
+      categoria: categoria || "Outro",
       arquivo_url: URL.createObjectURL(arquivo),
     });
     setDocs(getDocumentosAdmin());
     setNome("");
+    setCategoria("");
     setArquivo(null);
   };
 
@@ -49,6 +60,19 @@ const AdminDocuments: React.FC = () => {
           placeholder="Nome do documento"
           className="w-full touch-target px-4 rounded-xl bg-secondary border-0 border-b-2 border-transparent focus:border-primary focus:outline-none text-base transition-colors"
         />
+        <div className="relative">
+          <select
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+            className="w-full touch-target px-4 rounded-xl bg-secondary border-0 border-b-2 border-transparent focus:border-primary focus:outline-none text-base appearance-none cursor-pointer transition-colors"
+          >
+            <option value="">Categoria (opcional)</option>
+            {categorias.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+        </div>
         <motion.button
           type="button"
           whileTap={{ scale: 0.96 }}
