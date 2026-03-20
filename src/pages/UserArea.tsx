@@ -73,6 +73,7 @@ const UserArea: React.FC = () => {
     setIgrejaId("");
     setTipoFormulario("");
     setNomeResponsavel("");
+    setMesReferencia(currentMonth);
     setArquivo(null);
     setProtocolo(null);
     setError("");
