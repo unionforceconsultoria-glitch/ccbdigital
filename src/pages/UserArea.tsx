@@ -6,12 +6,30 @@ import { adicionarEnvio, getDocumentosAdmin } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 
+const meses = [
+  { value: "01", label: "Janeiro" },
+  { value: "02", label: "Fevereiro" },
+  { value: "03", label: "Março" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Maio" },
+  { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
+];
+
 const UserArea: React.FC = () => {
   const navigate = useNavigate();
+  const currentYear = new Date().getFullYear();
+  const currentMonth = String(new Date().getMonth() + 1).padStart(2, "0");
 
   const [igrejaId, setIgrejaId] = useState("");
   const [tipoFormulario, setTipoFormulario] = useState("");
   const [nomeResponsavel, setNomeResponsavel] = useState("");
+  const [mesReferencia, setMesReferencia] = useState(currentMonth);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -45,6 +63,7 @@ const UserArea: React.FC = () => {
       nome_responsavel: nomeResponsavel.trim(),
       arquivo_nome: arquivo.name,
       arquivo_url: URL.createObjectURL(arquivo),
+      mes_referencia: `${currentYear}-${mesReferencia}`,
     });
 
     setProtocolo(envio.protocolo);
@@ -54,6 +73,7 @@ const UserArea: React.FC = () => {
     setIgrejaId("");
     setTipoFormulario("");
     setNomeResponsavel("");
+    setMesReferencia(currentMonth);
     setArquivo(null);
     setProtocolo(null);
     setError("");
@@ -142,6 +162,27 @@ const UserArea: React.FC = () => {
                     {igrejas.map((i) => (
                       <option key={i.id} value={i.id}>
                         {i.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Mês de Referência */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  Mês de Referência
+                </label>
+                <div className="relative">
+                  <select
+                    value={mesReferencia}
+                    onChange={(e) => setMesReferencia(e.target.value)}
+                    className="w-full touch-target px-4 rounded-xl bg-secondary border-0 border-b-2 border-transparent focus:border-primary focus:outline-none text-base appearance-none cursor-pointer transition-colors"
+                  >
+                    {meses.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label} / {currentYear}
                       </option>
                     ))}
                   </select>

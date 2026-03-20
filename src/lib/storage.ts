@@ -55,13 +55,13 @@ export function getMesReferencia(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function adicionarEnvio(envio: Omit<Envio, "id" | "protocolo" | "data_envio" | "mes_referencia">): Envio {
+export function adicionarEnvio(envio: Omit<Envio, "id" | "protocolo" | "data_envio"> & { mes_referencia?: string }): Envio {
   const newEnvio: Envio = {
     ...envio,
     id: crypto.randomUUID(),
     protocolo: gerarProtocolo(),
     data_envio: new Date().toISOString(),
-    mes_referencia: getMesReferencia(),
+    mes_referencia: envio.mes_referencia || getMesReferencia(),
   };
   const envios = getEnvios();
   envios.push(newEnvio);
@@ -96,4 +96,9 @@ export function adicionarDocumentoAdmin(doc: Omit<DocumentoAdmin, "id" | "data_u
 export function removerDocumentoAdmin(id: string) {
   const docs = getDocumentosAdmin().filter((d) => d.id !== id);
   localStorage.setItem(DOCS_KEY, JSON.stringify(docs));
+}
+
+export function removerEnvio(id: string) {
+  const envios = getEnvios().filter((e) => e.id !== id);
+  saveEnvios(envios);
 }
