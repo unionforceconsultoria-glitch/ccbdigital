@@ -43,7 +43,7 @@ export const igrejas: Igreja[] = [
   { id: 32, nome: "Planalto", distribuicao: "JAQUELINE" },
   { id: 33, nome: "São Tomaz (Cond. N. S. Aparecida)", distribuicao: "JAQUELINE" },
   { id: 34, nome: "Cond. Todos os Santos", distribuicao: "JAQUELINE" },
-  { id: 35, nome: "Res. Doce Vento", distribuicao: "JAQUELINE" },
+  { id: 35, nome: "Res. Doca Vetorazo", distribuicao: "JAQUELINE" },
   { id: 36, nome: "Sala de Costura", distribuicao: "JAQUELINE" },
   { id: 37, nome: "Marialda Mello", distribuicao: "JAQUELINE" },
 
