@@ -14,6 +14,7 @@ export interface Envio {
 export interface DocumentoAdmin {
   id: string;
   nome: string;
+  categoria: string;
   arquivo_url: string;
   data_upload: string;
 }
