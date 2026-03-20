@@ -55,13 +55,13 @@ export function getMesReferencia(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function adicionarEnvio(envio: Omit<Envio, "id" | "protocolo" | "data_envio" | "mes_referencia">): Envio {
+export function adicionarEnvio(envio: Omit<Envio, "id" | "protocolo" | "data_envio"> & { mes_referencia?: string }): Envio {
   const newEnvio: Envio = {
     ...envio,
     id: crypto.randomUUID(),
     protocolo: gerarProtocolo(),
     data_envio: new Date().toISOString(),
-    mes_referencia: getMesReferencia(),
+    mes_referencia: envio.mes_referencia || getMesReferencia(),
   };
   const envios = getEnvios();
   envios.push(newEnvio);
