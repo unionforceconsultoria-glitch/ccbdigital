@@ -18,6 +18,7 @@ const categorias = [
 const AdminDocuments: React.FC = () => {
   const [docs, setDocs] = useState(getDocumentosAdmin());
   const [nome, setNome] = useState("");
+  const [categoria, setCategoria] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
