@@ -79,6 +79,7 @@ const AdminArea: React.FC = () => {
       {/* Content */}
       <div className="max-w-[800px] mx-auto p-4">
         {activeTab === "dashboard" && <AdminDashboard />}
+        {activeTab === "arquivos" && <AdminFileManager />}
         {activeTab === "impressao" && <AdminPrinting />}
         {activeTab === "distribuicao" && <AdminDistribution />}
         {activeTab === "documentos" && <AdminDocuments />}

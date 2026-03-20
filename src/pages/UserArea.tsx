@@ -169,6 +169,27 @@ const UserArea: React.FC = () => {
                 </div>
               </div>
 
+              {/* Mês de Referência */}
+              <div>
+                <label className="block text-sm font-semibold text-foreground mb-2">
+                  Mês de Referência
+                </label>
+                <div className="relative">
+                  <select
+                    value={mesReferencia}
+                    onChange={(e) => setMesReferencia(e.target.value)}
+                    className="w-full touch-target px-4 rounded-xl bg-secondary border-0 border-b-2 border-transparent focus:border-primary focus:outline-none text-base appearance-none cursor-pointer transition-colors"
+                  >
+                    {meses.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label} / {currentYear}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+                </div>
+              </div>
+
               {/* Tipo de Formulário */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-2">
