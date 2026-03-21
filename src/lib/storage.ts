@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "./supabase";
 
 export interface Envio {
   id: string;
@@ -33,31 +32,50 @@ export function getMesReferencia(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function getStoredEnvios(): Envio[] {
+  try {
+    return JSON.parse(localStorage.getItem("ccb_envios") || "[]");
+  } catch { return []; }
+}
+
+function setStoredEnvios(envios: Envio[]) {
+  localStorage.setItem("ccb_envios", JSON.stringify(envios));
+}
+
+function getStoredDocumentos(): DocumentoAdmin[] {
+  try {
+    return JSON.parse(localStorage.getItem("ccb_documentos") || "[]");
+  } catch { return []; }
+}
+
+function setStoredDocumentos(docs: DocumentoAdmin[]) {
+  localStorage.setItem("ccb_documentos", JSON.stringify(docs));
+}
+
 // Hooks para Envios
 export const useEnvios = () => {
   return useQuery({
     queryKey: ["envios"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ccb_envios")
-        .select("*")
-        .order("data_envio", { ascending: false });
-      if (error) throw error;
-      return data as Envio[];
-    },
+    queryFn: async () => getStoredEnvios(),
   });
 };
 
 export const useAddEnvio = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (envio: Omit<Envio, "id" | "protocolo" | "data_envio"> & { mes_referencia?: string }) => {
+    mutationFn: async (envio: Omit<Envio, "id" | "protocolo" | "data_envio">) => {
       const protocolo = gerarProtocolo();
-      const mes_referencia = envio.mes_referencia || getMesReferencia();
-      const payload = { ...envio, protocolo, mes_referencia };
-      const { data, error } = await supabase.from("ccb_envios").insert([payload]).select().single();
-      if (error) throw error;
-      return data as Envio;
+      const newEnvio: Envio = {
+        ...envio,
+        id: crypto.randomUUID(),
+        protocolo,
+        data_envio: new Date().toISOString(),
+        mes_referencia: envio.mes_referencia || getMesReferencia(),
+      };
+      const envios = getStoredEnvios();
+      envios.unshift(newEnvio);
+      setStoredEnvios(envios);
+      return newEnvio;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["envios"] });
@@ -69,8 +87,8 @@ export const useRemoveEnvio = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("ccb_envios").delete().eq("id", id);
-      if (error) throw error;
+      const envios = getStoredEnvios().filter(e => e.id !== id);
+      setStoredEnvios(envios);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["envios"] });
@@ -82,14 +100,7 @@ export const useRemoveEnvio = () => {
 export const useDocumentosAdmin = () => {
   return useQuery({
     queryKey: ["documentos"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ccb_documentos")
-        .select("*")
-        .order("data_upload", { ascending: false });
-      if (error) throw error;
-      return data as DocumentoAdmin[];
-    },
+    queryFn: async () => getStoredDocumentos(),
   });
 };
 
@@ -97,9 +108,15 @@ export const useAddDocumentoAdmin = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (doc: Omit<DocumentoAdmin, "id" | "data_upload">) => {
-      const { data, error } = await supabase.from("ccb_documentos").insert([doc]).select().single();
-      if (error) throw error;
-      return data as DocumentoAdmin;
+      const newDoc: DocumentoAdmin = {
+        ...doc,
+        id: crypto.randomUUID(),
+        data_upload: new Date().toISOString(),
+      };
+      const docs = getStoredDocumentos();
+      docs.unshift(newDoc);
+      setStoredDocumentos(docs);
+      return newDoc;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documentos"] });
@@ -111,8 +128,8 @@ export const useRemoveDocumentoAdmin = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("ccb_documentos").delete().eq("id", id);
-      if (error) throw error;
+      const docs = getStoredDocumentos().filter(d => d.id !== id);
+      setStoredDocumentos(docs);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documentos"] });
