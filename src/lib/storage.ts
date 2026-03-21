@@ -1,3 +1,6 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "./supabase";
+
 export interface Envio {
   id: string;
   igreja_id: number;
@@ -19,35 +22,9 @@ export interface DocumentoAdmin {
   data_upload: string;
 }
 
-const ENVIOS_KEY = "ccb_envios";
-const DOCS_KEY = "ccb_documentos";
-const COUNTER_KEY = "ccb_counter";
-
-function getEnvios(): Envio[] {
-  try {
-    return JSON.parse(localStorage.getItem(ENVIOS_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveEnvios(envios: Envio[]) {
-  localStorage.setItem(ENVIOS_KEY, JSON.stringify(envios));
-}
-
-function getCounter(): number {
-  return parseInt(localStorage.getItem(COUNTER_KEY) || "0", 10);
-}
-
-function incrementCounter(): number {
-  const next = getCounter() + 1;
-  localStorage.setItem(COUNTER_KEY, String(next));
-  return next;
-}
-
 export function gerarProtocolo(): string {
   const year = new Date().getFullYear();
-  const num = incrementCounter();
+  const num = Math.floor(Math.random() * 10000);
   return `CCB-${year}-${String(num).padStart(4, "0")}`;
 }
 
@@ -56,50 +33,89 @@ export function getMesReferencia(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export function adicionarEnvio(envio: Omit<Envio, "id" | "protocolo" | "data_envio"> & { mes_referencia?: string }): Envio {
-  const newEnvio: Envio = {
-    ...envio,
-    id: crypto.randomUUID(),
-    protocolo: gerarProtocolo(),
-    data_envio: new Date().toISOString(),
-    mes_referencia: envio.mes_referencia || getMesReferencia(),
-  };
-  const envios = getEnvios();
-  envios.push(newEnvio);
-  saveEnvios(envios);
-  return newEnvio;
-}
+// Hooks para Envios
+export const useEnvios = () => {
+  return useQuery({
+    queryKey: ["envios"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ccb_envios")
+        .select("*")
+        .order("data_envio", { ascending: false });
+      if (error) throw error;
+      return data as Envio[];
+    },
+  });
+};
 
-export function listarEnvios(): Envio[] {
-  return getEnvios();
-}
+export const useAddEnvio = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (envio: Omit<Envio, "id" | "protocolo" | "data_envio"> & { mes_referencia?: string }) => {
+      const protocolo = gerarProtocolo();
+      const mes_referencia = envio.mes_referencia || getMesReferencia();
+      const payload = { ...envio, protocolo, mes_referencia };
+      const { data, error } = await supabase.from("ccb_envios").insert([payload]).select().single();
+      if (error) throw error;
+      return data as Envio;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["envios"] });
+    },
+  });
+};
 
-export function getDocumentosAdmin(): DocumentoAdmin[] {
-  try {
-    return JSON.parse(localStorage.getItem(DOCS_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
+export const useRemoveEnvio = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("ccb_envios").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["envios"] });
+    },
+  });
+};
 
-export function adicionarDocumentoAdmin(doc: Omit<DocumentoAdmin, "id" | "data_upload">): DocumentoAdmin {
-  const newDoc: DocumentoAdmin = {
-    ...doc,
-    id: crypto.randomUUID(),
-    data_upload: new Date().toISOString(),
-  };
-  const docs = getDocumentosAdmin();
-  docs.push(newDoc);
-  localStorage.setItem(DOCS_KEY, JSON.stringify(docs));
-  return newDoc;
-}
+// Hooks para Documentos Admin
+export const useDocumentosAdmin = () => {
+  return useQuery({
+    queryKey: ["documentos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ccb_documentos")
+        .select("*")
+        .order("data_upload", { ascending: false });
+      if (error) throw error;
+      return data as DocumentoAdmin[];
+    },
+  });
+};
 
-export function removerDocumentoAdmin(id: string) {
-  const docs = getDocumentosAdmin().filter((d) => d.id !== id);
-  localStorage.setItem(DOCS_KEY, JSON.stringify(docs));
-}
+export const useAddDocumentoAdmin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (doc: Omit<DocumentoAdmin, "id" | "data_upload">) => {
+      const { data, error } = await supabase.from("ccb_documentos").insert([doc]).select().single();
+      if (error) throw error;
+      return data as DocumentoAdmin;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documentos"] });
+    },
+  });
+};
 
-export function removerEnvio(id: string) {
-  const envios = getEnvios().filter((e) => e.id !== id);
-  saveEnvios(envios);
-}
+export const useRemoveDocumentoAdmin = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("ccb_documentos").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documentos"] });
+    },
+  });
+};

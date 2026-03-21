@@ -1,10 +1,10 @@
 import React from "react";
 import { igrejas } from "@/data/churches";
-import { listarEnvios, getMesReferencia } from "@/lib/storage";
+import { useEnvios, getMesReferencia } from "@/lib/storage";
 import { CheckCircle2, XCircle, Church } from "lucide-react";
 
 const AdminDashboard: React.FC = () => {
-  const envios = listarEnvios();
+  const { data: envios = [] } = useEnvios();
   const mesAtual = getMesReferencia();
 
   const igrejasQueEnviaram = new Set(

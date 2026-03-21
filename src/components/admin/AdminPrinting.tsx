@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { igrejas, tiposFormulario } from "@/data/churches";
-import { listarEnvios } from "@/lib/storage";
+import { useEnvios } from "@/lib/storage";
 import { Download, Printer, FileText, Search } from "lucide-react";
 
 const meses = [
@@ -25,7 +25,7 @@ const AdminPrinting: React.FC = () => {
   const [igrejaFiltro, setIgrejaFiltro] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("");
 
-  const envios = listarEnvios();
+  const { data: envios = [] } = useEnvios();
   const mesRef = `${year}-${mesFiltro}`;
 
   const filtered = envios.filter((e) => {

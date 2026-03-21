@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { igrejas, distribuicoes } from "@/data/churches";
-import { listarEnvios, getMesReferencia } from "@/lib/storage";
+import { useEnvios, getMesReferencia } from "@/lib/storage";
 import { BarChart3, ChevronDown } from "lucide-react";
 
 const AdminDistribution: React.FC = () => {
   const [filtro, setFiltro] = useState("");
-  const envios = listarEnvios();
+  const { data: envios = [] } = useEnvios();
   const mesAtual = getMesReferencia();
 
   const igrejasQueEnviaram = new Set(

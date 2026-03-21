@@ -1,9 +1,9 @@
 import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import {
-  adicionarDocumentoAdmin,
-  getDocumentosAdmin,
-  removerDocumentoAdmin,
+  useAddDocumentoAdmin,
+  useDocumentosAdmin,
+  useRemoveDocumentoAdmin,
 } from "@/lib/storage";
 import { Upload, FileText, Trash2, FolderUp, ChevronDown } from "lucide-react";
 
@@ -16,7 +16,9 @@ const categorias = [
 ];
 
 const AdminDocuments: React.FC = () => {
-  const [docs, setDocs] = useState(getDocumentosAdmin());
+  const { data: docs = [] } = useDocumentosAdmin();
+  const addDoc = useAddDocumentoAdmin();
+  const removeDoc = useRemoveDocumentoAdmin();
   const [nome, setNome] = useState("");
   const [categoria, setCategoria] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -29,20 +31,18 @@ const AdminDocuments: React.FC = () => {
       setError("Preencha o nome e selecione um arquivo.");
       return;
     }
-    adicionarDocumentoAdmin({
+    addDoc.mutate({
       nome: nome.trim(),
       categoria: categoria || "Outro",
       arquivo_url: URL.createObjectURL(arquivo),
     });
-    setDocs(getDocumentosAdmin());
     setNome("");
     setCategoria("");
     setArquivo(null);
   };
 
   const handleRemove = (id: string) => {
-    removerDocumentoAdmin(id);
-    setDocs(getDocumentosAdmin());
+    removeDoc.mutate(id);
   };
 
   return (

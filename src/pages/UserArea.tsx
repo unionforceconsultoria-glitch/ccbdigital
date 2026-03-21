@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { igrejas, tiposFormulario } from "@/data/churches";
-import { adicionarEnvio, getDocumentosAdmin } from "@/lib/storage";
+import { useAddEnvio, useDocumentosAdmin } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 
@@ -37,7 +37,8 @@ const UserArea: React.FC = () => {
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
-  const documentosAdmin = getDocumentosAdmin();
+  const { data: documentosAdmin = [] } = useDocumentosAdmin();
+  const addEnvio = useAddEnvio();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -45,7 +46,7 @@ const UserArea: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -57,7 +58,7 @@ const UserArea: React.FC = () => {
     const igreja = igrejas.find((i) => i.id === Number(igrejaId));
     if (!igreja) return;
 
-    const envio = adicionarEnvio({
+    const envio = await addEnvio.mutateAsync({
       igreja_id: igreja.id,
       igreja_nome: igreja.nome,
       tipo_formulario: tipoFormulario,
@@ -298,8 +299,7 @@ const UserArea: React.FC = () => {
         </AnimatePresence>
 
         {/* Baixar Formulários */}
-        {documentosAdmin.length > 0 && (
-          <div className="bg-card rounded-2xl card-shadow p-6">
+        <div className="bg-card rounded-2xl card-shadow p-6 mt-4">
             <h2 className="text-lg font-bold text-primary mb-3 flex items-center gap-2">
               <Download className="w-5 h-5" />
               Baixar Formulários
@@ -341,6 +341,9 @@ const UserArea: React.FC = () => {
             })()}
 
             <div className="space-y-2">
+              {documentosAdmin.length === 0 && (
+                <p className="text-muted-foreground text-sm">Nenhum formulário disponível no momento.</p>
+              )}
               {documentosAdmin
                 .filter((doc) => !categoriaFiltro || doc.categoria === categoriaFiltro)
                 .map((doc) => (
@@ -368,7 +371,6 @@ const UserArea: React.FC = () => {
                 ))}
             </div>
           </div>
-        )}
       </div>
     </div>
   );
