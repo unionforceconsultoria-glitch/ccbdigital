@@ -60,15 +60,15 @@ const UserArea: React.FC = () => {
     if (!igreja) return;
 
     try {
-      const base64Url = await fileToBase64(arquivo);
       const envio = await addEnvio.mutateAsync({
         igreja_id: igreja.id,
         igreja_nome: igreja.nome,
         tipo_formulario: tipoFormulario,
         nome_responsavel: nomeResponsavel.trim(),
         arquivo_nome: arquivo.name,
-        arquivo_url: base64Url,
+        arquivo_url: '',
         mes_referencia: mesReferencia,
+        file: arquivo,
       });
 
       setProtocolo(envio.protocolo);

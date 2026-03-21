@@ -34,11 +34,11 @@ const AdminDocuments: React.FC = () => {
     }
     
     try {
-      const base64Url = await fileToBase64(arquivo);
       await addDoc.mutateAsync({
         nome: nome.trim(),
         categoria: categoria || "Outro",
-        arquivo_url: base64Url,
+        arquivo_url: '',
+        file: arquivo,
       });
       setNome("");
       setCategoria("");
