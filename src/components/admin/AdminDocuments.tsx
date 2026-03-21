@@ -5,7 +5,7 @@ import {
   useDocumentosAdmin,
   useRemoveDocumentoAdmin,
 } from "@/lib/storage";
-import { fileToBase64 } from "@/lib/utils";
+
 import { Upload, FileText, Trash2, FolderUp, ChevronDown } from "lucide-react";
 
 const categorias = [
@@ -34,11 +34,11 @@ const AdminDocuments: React.FC = () => {
     }
     
     try {
-      const base64Url = await fileToBase64(arquivo);
       await addDoc.mutateAsync({
         nome: nome.trim(),
         categoria: categoria || "Outro",
-        arquivo_url: base64Url,
+        arquivo_url: '',
+        file: arquivo,
       });
       setNome("");
       setCategoria("");

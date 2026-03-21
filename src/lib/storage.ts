@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface Envio {
   id: string;
@@ -32,50 +33,67 @@ export function getMesReferencia(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function getStoredEnvios(): Envio[] {
-  try {
-    return JSON.parse(localStorage.getItem("ccb_envios") || "[]");
-  } catch { return []; }
-}
-
-function setStoredEnvios(envios: Envio[]) {
-  localStorage.setItem("ccb_envios", JSON.stringify(envios));
-}
-
-function getStoredDocumentos(): DocumentoAdmin[] {
-  try {
-    return JSON.parse(localStorage.getItem("ccb_documentos") || "[]");
-  } catch { return []; }
-}
-
-function setStoredDocumentos(docs: DocumentoAdmin[]) {
-  localStorage.setItem("ccb_documentos", JSON.stringify(docs));
+async function uploadFile(file: File, folder: string): Promise<string> {
+  const ext = file.name.split('.').pop();
+  const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
+  
+  const { error } = await supabase.storage
+    .from('documentos')
+    .upload(fileName, file);
+  
+  if (error) throw error;
+  
+  const { data } = supabase.storage
+    .from('documentos')
+    .getPublicUrl(fileName);
+  
+  return data.publicUrl;
 }
 
 // Hooks para Envios
 export const useEnvios = () => {
   return useQuery({
     queryKey: ["envios"],
-    queryFn: async () => getStoredEnvios(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('envios')
+        .select('*')
+        .order('data_envio', { ascending: false });
+      if (error) throw error;
+      return (data || []) as Envio[];
+    },
   });
 };
 
 export const useAddEnvio = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (envio: Omit<Envio, "id" | "protocolo" | "data_envio">) => {
+    mutationFn: async (envio: Omit<Envio, "id" | "protocolo" | "data_envio"> & { file?: File }) => {
+      let arquivo_url = envio.arquivo_url;
+      
+      // Upload file to storage if provided
+      if (envio.file) {
+        arquivo_url = await uploadFile(envio.file, 'envios');
+      }
+      
       const protocolo = gerarProtocolo();
-      const newEnvio: Envio = {
-        ...envio,
-        id: crypto.randomUUID(),
-        protocolo,
-        data_envio: new Date().toISOString(),
-        mes_referencia: envio.mes_referencia || getMesReferencia(),
-      };
-      const envios = getStoredEnvios();
-      envios.unshift(newEnvio);
-      setStoredEnvios(envios);
-      return newEnvio;
+      const { data, error } = await supabase
+        .from('envios')
+        .insert({
+          igreja_id: envio.igreja_id,
+          igreja_nome: envio.igreja_nome,
+          tipo_formulario: envio.tipo_formulario,
+          nome_responsavel: envio.nome_responsavel,
+          arquivo_nome: envio.arquivo_nome,
+          arquivo_url,
+          mes_referencia: envio.mes_referencia || getMesReferencia(),
+          protocolo,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data as Envio;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["envios"] });
@@ -87,8 +105,11 @@ export const useRemoveEnvio = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const envios = getStoredEnvios().filter(e => e.id !== id);
-      setStoredEnvios(envios);
+      const { error } = await supabase
+        .from('envios')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["envios"] });
@@ -100,23 +121,39 @@ export const useRemoveEnvio = () => {
 export const useDocumentosAdmin = () => {
   return useQuery({
     queryKey: ["documentos"],
-    queryFn: async () => getStoredDocumentos(),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documentos_admin')
+        .select('*')
+        .order('data_upload', { ascending: false });
+      if (error) throw error;
+      return (data || []) as DocumentoAdmin[];
+    },
   });
 };
 
 export const useAddDocumentoAdmin = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (doc: Omit<DocumentoAdmin, "id" | "data_upload">) => {
-      const newDoc: DocumentoAdmin = {
-        ...doc,
-        id: crypto.randomUUID(),
-        data_upload: new Date().toISOString(),
-      };
-      const docs = getStoredDocumentos();
-      docs.unshift(newDoc);
-      setStoredDocumentos(docs);
-      return newDoc;
+    mutationFn: async (doc: Omit<DocumentoAdmin, "id" | "data_upload"> & { file?: File }) => {
+      let arquivo_url = doc.arquivo_url;
+      
+      if (doc.file) {
+        arquivo_url = await uploadFile(doc.file, 'admin');
+      }
+      
+      const { data, error } = await supabase
+        .from('documentos_admin')
+        .insert({
+          nome: doc.nome,
+          categoria: doc.categoria || 'Outro',
+          arquivo_url,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data as DocumentoAdmin;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documentos"] });
@@ -128,8 +165,11 @@ export const useRemoveDocumentoAdmin = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const docs = getStoredDocumentos().filter(d => d.id !== id);
-      setStoredDocumentos(docs);
+      const { error } = await supabase
+        .from('documentos_admin')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documentos"] });
