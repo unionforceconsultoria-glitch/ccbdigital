@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { igrejas, tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield } from "lucide-react";
-import { fileToBase64 } from "@/lib/utils";
 import ProtocolStamp from "@/components/ProtocolStamp";
 
 const meses = [
