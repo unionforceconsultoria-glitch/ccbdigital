@@ -5,7 +5,7 @@ import {
   useDocumentosAdmin,
   useRemoveDocumentoAdmin,
 } from "@/lib/storage";
-import { fileToBase64 } from "@/lib/utils";
+
 import { Upload, FileText, Trash2, FolderUp, ChevronDown } from "lucide-react";
 
 const categorias = [
