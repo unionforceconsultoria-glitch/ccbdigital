@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { igrejas, tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield } from "lucide-react";
+import { fileToBase64 } from "@/lib/utils";
 import ProtocolStamp from "@/components/ProtocolStamp";
 
 const meses = [
@@ -23,13 +24,14 @@ const meses = [
 
 const UserArea: React.FC = () => {
   const navigate = useNavigate();
-  const currentYear = new Date().getFullYear();
-  const currentMonth = String(new Date().getMonth() + 1).padStart(2, "0");
+  const defaultDate = new Date();
+  defaultDate.setMonth(defaultDate.getMonth() - 1);
+  const defaultMonth = `${defaultDate.getFullYear()}-${String(defaultDate.getMonth() + 1).padStart(2, "0")}`;
 
   const [igrejaId, setIgrejaId] = useState("");
   const [tipoFormulario, setTipoFormulario] = useState("");
   const [nomeResponsavel, setNomeResponsavel] = useState("");
-  const [mesReferencia, setMesReferencia] = useState(currentMonth);
+  const [mesReferencia, setMesReferencia] = useState(defaultMonth);
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -58,24 +60,30 @@ const UserArea: React.FC = () => {
     const igreja = igrejas.find((i) => i.id === Number(igrejaId));
     if (!igreja) return;
 
-    const envio = await addEnvio.mutateAsync({
-      igreja_id: igreja.id,
-      igreja_nome: igreja.nome,
-      tipo_formulario: tipoFormulario,
-      nome_responsavel: nomeResponsavel.trim(),
-      arquivo_nome: arquivo.name,
-      arquivo_url: URL.createObjectURL(arquivo),
-      mes_referencia: `${currentYear}-${mesReferencia}`,
-    });
+    try {
+      const base64Url = await fileToBase64(arquivo);
+      const envio = await addEnvio.mutateAsync({
+        igreja_id: igreja.id,
+        igreja_nome: igreja.nome,
+        tipo_formulario: tipoFormulario,
+        nome_responsavel: nomeResponsavel.trim(),
+        arquivo_nome: arquivo.name,
+        arquivo_url: base64Url,
+        mes_referencia: mesReferencia,
+      });
 
-    setProtocolo(envio.protocolo);
+      setProtocolo(envio.protocolo);
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao enviar documento. Tente novamente.");
+    }
   };
 
   const resetForm = () => {
     setIgrejaId("");
     setTipoFormulario("");
     setNomeResponsavel("");
-    setMesReferencia(currentMonth);
+    setMesReferencia(defaultMonth);
     setArquivo(null);
     setProtocolo(null);
     setError("");
@@ -176,20 +184,12 @@ const UserArea: React.FC = () => {
                 <label className="block text-sm font-semibold text-foreground mb-2">
                   Mês de Referência
                 </label>
-                <div className="relative">
-                  <select
-                    value={mesReferencia}
-                    onChange={(e) => setMesReferencia(e.target.value)}
-                    className="w-full touch-target px-4 rounded-xl bg-secondary border-0 border-b-2 border-transparent focus:border-primary focus:outline-none text-base appearance-none cursor-pointer transition-colors"
-                  >
-                    {meses.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {m.label} / {currentYear}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-                </div>
+                <input
+                  type="month"
+                  value={mesReferencia}
+                  onChange={(e) => setMesReferencia(e.target.value)}
+                  className="w-full touch-target px-4 rounded-xl bg-secondary border-0 border-b-2 border-transparent focus:border-primary focus:outline-none text-base transition-colors"
+                />
               </div>
 
               {/* Tipo de Formulário */}

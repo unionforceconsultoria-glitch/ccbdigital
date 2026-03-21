@@ -5,6 +5,7 @@ import {
   useDocumentosAdmin,
   useRemoveDocumentoAdmin,
 } from "@/lib/storage";
+import { fileToBase64 } from "@/lib/utils";
 import { Upload, FileText, Trash2, FolderUp, ChevronDown } from "lucide-react";
 
 const categorias = [
@@ -25,20 +26,27 @@ const AdminDocuments: React.FC = () => {
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     setError("");
     if (!nome.trim() || !arquivo) {
       setError("Preencha o nome e selecione um arquivo.");
       return;
     }
-    addDoc.mutate({
-      nome: nome.trim(),
-      categoria: categoria || "Outro",
-      arquivo_url: URL.createObjectURL(arquivo),
-    });
-    setNome("");
-    setCategoria("");
-    setArquivo(null);
+    
+    try {
+      const base64Url = await fileToBase64(arquivo);
+      await addDoc.mutateAsync({
+        nome: nome.trim(),
+        categoria: categoria || "Outro",
+        arquivo_url: base64Url,
+      });
+      setNome("");
+      setCategoria("");
+      setArquivo(null);
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao salvar arquivo. Ele pode ser grande demais.");
+    }
   };
 
   const handleRemove = (id: string) => {
@@ -86,7 +94,13 @@ const AdminDocuments: React.FC = () => {
           ref={fileRef}
           type="file"
           accept=".pdf,image/*"
-          onChange={(e) => e.target.files?.[0] && setArquivo(e.target.files[0])}
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              setArquivo(file);
+              setNome(file.name.replace(/\.[^/.]+$/, ""));
+            }
+          }}
           className="hidden"
         />
         {error && <p className="text-destructive text-sm font-medium">{error}</p>}

@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { igrejas, tiposFormulario } from "@/data/churches";
 import { useEnvios } from "@/lib/storage";
-import { Download, Printer, FileText, Search } from "lucide-react";
+import { Download, Printer, FileText, Search, Archive } from "lucide-react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 const meses = [
   { value: "01", label: "Janeiro" },
@@ -19,14 +21,17 @@ const meses = [
 ];
 
 const AdminPrinting: React.FC = () => {
-  const year = new Date().getFullYear();
-  const currentMonth = String(new Date().getMonth() + 1).padStart(2, "0");
-  const [mesFiltro, setMesFiltro] = useState(currentMonth);
+  const defaultDate = new Date();
+  defaultDate.setMonth(defaultDate.getMonth() - 1);
+  const defaultMonth = `${defaultDate.getFullYear()}-${String(defaultDate.getMonth() + 1).padStart(2, "0")}`;
+
+  const [mesFiltro, setMesFiltro] = useState(defaultMonth);
   const [igrejaFiltro, setIgrejaFiltro] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("");
+  const [isZipping, setIsZipping] = useState(false);
 
   const { data: envios = [] } = useEnvios();
-  const mesRef = `${year}-${mesFiltro}`;
+  const mesRef = mesFiltro;
 
   const filtered = envios.filter((e) => {
     if (e.mes_referencia !== mesRef) return false;
@@ -34,6 +39,38 @@ const AdminPrinting: React.FC = () => {
     if (tipoFiltro && e.tipo_formulario !== tipoFiltro) return false;
     return true;
   });
+
+  const handleDownloadZip = async () => {
+    if (filtered.length === 0) return;
+    setIsZipping(true);
+    
+    try {
+      const zip = new JSZip();
+      const folderName = `Documentos_${mesFiltro}`;
+      const rootFolder = zip.folder(folderName);
+      
+      if (!rootFolder) return;
+
+      for (const envio of filtered) {
+        try {
+          const response = await fetch(envio.arquivo_url);
+          const blob = await response.blob();
+          
+          const igrejaFolder = rootFolder.folder(envio.igreja_nome);
+          igrejaFolder?.file(envio.arquivo_nome, blob);
+        } catch (err) {
+          console.error("Erro ao baixar arquivo:", envio.arquivo_nome, err);
+        }
+      }
+      
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, `${folderName}.zip`);
+    } catch (err) {
+      console.error("Erro ao gerar zip:", err);
+    } finally {
+      setIsZipping(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -44,15 +81,12 @@ const AdminPrinting: React.FC = () => {
           Filtros
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <select
+          <input
+            type="month"
             value={mesFiltro}
             onChange={(e) => setMesFiltro(e.target.value)}
-            className="w-full touch-target px-4 rounded-xl bg-secondary border-0 text-sm appearance-none cursor-pointer"
-          >
-            {meses.map((m) => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
+            className="w-full touch-target px-4 rounded-xl bg-secondary border-0 text-sm"
+          />
           <select
             value={igrejaFiltro}
             onChange={(e) => setIgrejaFiltro(e.target.value)}
@@ -83,13 +117,23 @@ const AdminPrinting: React.FC = () => {
             {filtered.length} documento{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
           </h3>
           {filtered.length > 0 && (
-            <button
-              onClick={() => window.print()}
-              className="text-sm font-semibold text-primary flex items-center gap-1"
-            >
-              <Printer className="w-4 h-4" />
-              Imprimir
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownloadZip}
+                disabled={isZipping}
+                className="text-sm font-semibold text-primary flex items-center gap-1 hover:brightness-110 disabled:opacity-50"
+              >
+                <Archive className="w-4 h-4" />
+                {isZipping ? "Gerando..." : "Baixar ZIP"}
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="text-sm font-semibold text-primary flex items-center gap-1 hover:brightness-110"
+              >
+                <Printer className="w-4 h-4" />
+                Imprimir
+              </button>
+            </div>
           )}
         </div>
 
