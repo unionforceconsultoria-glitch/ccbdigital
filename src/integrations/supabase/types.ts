@@ -14,7 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      documentos_admin: {
+        Row: {
+          arquivo_url: string
+          categoria: string | null
+          data_upload: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          arquivo_url: string
+          categoria?: string | null
+          data_upload?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          arquivo_url?: string
+          categoria?: string | null
+          data_upload?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
+      envios: {
+        Row: {
+          arquivo_nome: string
+          arquivo_url: string
+          data_envio: string
+          id: string
+          igreja_id: number
+          igreja_nome: string
+          mes_referencia: string
+          nome_responsavel: string
+          protocolo: string
+          tipo_formulario: string
+        }
+        Insert: {
+          arquivo_nome: string
+          arquivo_url: string
+          data_envio?: string
+          id?: string
+          igreja_id: number
+          igreja_nome: string
+          mes_referencia: string
+          nome_responsavel: string
+          protocolo: string
+          tipo_formulario: string
+        }
+        Update: {
+          arquivo_nome?: string
+          arquivo_url?: string
+          data_envio?: string
+          id?: string
+          igreja_id?: number
+          igreja_nome?: string
+          mes_referencia?: string
+          nome_responsavel?: string
+          protocolo?: string
+          tipo_formulario?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
