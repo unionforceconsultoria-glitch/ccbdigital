@@ -409,13 +409,27 @@ const UserArea: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    <a
-                      href={doc.arquivo_url}
-                      download={doc.nome}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(doc.arquivo_url);
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = doc.nome || "documento";
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          window.URL.revokeObjectURL(url);
+                        } catch {
+                          window.open(doc.arquivo_url, "_blank");
+                        }
+                      }}
                       className="text-primary hover:text-primary/80 shrink-0"
                     >
                       <Download className="w-5 h-5" />
-                    </a>
+                    </button>
                   </div>
                 ))}
             </div>

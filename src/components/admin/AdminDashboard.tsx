@@ -1,14 +1,38 @@
-import React from "react";
+import React, { useState } from "react";
 import { igrejas } from "@/data/churches";
 import { useEnvios, getMesReferencia } from "@/lib/storage";
-import { CheckCircle2, XCircle, Church } from "lucide-react";
+import { Church, ChevronDown } from "lucide-react";
+
+const meses = [
+  { value: "01", label: "Janeiro" },
+  { value: "02", label: "Fevereiro" },
+  { value: "03", label: "Março" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Maio" },
+  { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
+];
+
+const getYears = () => {
+  const current = new Date().getFullYear();
+  return [current - 1, current, current + 1];
+};
 
 const AdminDashboard: React.FC = () => {
   const { data: envios = [] } = useEnvios();
-  const mesAtual = getMesReferencia();
+  const mesAtualDefault = getMesReferencia();
+  const [mesSelecionado, setMesSelecionado] = useState(mesAtualDefault);
+
+  const [anoStr, mesStr] = mesSelecionado.split("-");
+  const mesLabel = meses.find((m) => m.value === mesStr)?.label || mesStr;
 
   const igrejasQueEnviaram = new Set(
-    envios.filter((e) => e.mes_referencia === mesAtual).map((e) => e.igreja_id)
+    envios.filter((e) => e.mes_referencia === mesSelecionado).map((e) => e.igreja_id)
   );
 
   const totalIgrejas = igrejas.length;
@@ -17,6 +41,37 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="space-y-4">
+      {/* Month selector */}
+      <div className="bg-background rounded-2xl card-shadow p-4">
+        <label className="text-xs font-semibold text-muted-foreground mb-2 block">Mês de Referência</label>
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <select
+              value={mesStr}
+              onChange={(e) => setMesSelecionado(`${anoStr}-${e.target.value}`)}
+              className="w-full touch-target px-4 rounded-xl bg-secondary border-0 text-sm appearance-none cursor-pointer"
+            >
+              {meses.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          </div>
+          <div className="relative w-28">
+            <select
+              value={anoStr}
+              onChange={(e) => setMesSelecionado(`${e.target.value}-${mesStr}`)}
+              className="w-full touch-target px-4 rounded-xl bg-secondary border-0 text-sm appearance-none cursor-pointer"
+            >
+              {getYears().map((y) => (
+                <option key={y} value={String(y)}>{y}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          </div>
+        </div>
+      </div>
+
       {/* Counters */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-background rounded-2xl card-shadow p-4 text-center">
@@ -37,7 +92,7 @@ const AdminDashboard: React.FC = () => {
       <div className="bg-background rounded-2xl card-shadow p-4">
         <h3 className="font-bold text-primary mb-3 flex items-center gap-2">
           <Church className="w-5 h-5" />
-          Status das Igrejas — {mesAtual}
+          Status das Igrejas — {mesLabel} / {anoStr}
         </h3>
         <div className="space-y-1">
           {igrejas.map((igreja) => {
