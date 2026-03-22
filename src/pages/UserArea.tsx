@@ -328,10 +328,21 @@ const UserArea: React.FC = () => {
               <motion.button
                 type="submit"
                 whileTap={{ scale: 0.96 }}
-                className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                disabled={isUploading}
+                className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-70"
               >
-                <Upload className="w-5 h-5" />
-                ENVIAR DOCUMENTO
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    ENVIANDO...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    ENVIAR DOCUMENTO
+                  </>
+                )}
+              </motion.button>
               </motion.button>
             </motion.form>
           )}
