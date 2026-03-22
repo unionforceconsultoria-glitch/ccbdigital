@@ -29,6 +29,7 @@ const AdminPrinting: React.FC = () => {
   const [igrejaFiltro, setIgrejaFiltro] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("");
   const [isZipping, setIsZipping] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: envios = [] } = useEnvios();
   const mesRef = mesFiltro;
@@ -40,29 +41,48 @@ const AdminPrinting: React.FC = () => {
     return true;
   });
 
+  const allSelected = filtered.length > 0 && filtered.every((e) => selectedIds.has(e.id));
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((e) => e.id)));
+    }
+  };
+
+  const selectedEnvios = filtered.filter((e) => selectedIds.has(e.id));
+
   const handleDownloadZip = async () => {
-    if (filtered.length === 0) return;
+    const target = selectedEnvios.length > 0 ? selectedEnvios : filtered;
+    if (target.length === 0) return;
     setIsZipping(true);
-    
+
     try {
       const zip = new JSZip();
       const folderName = `Documentos_${mesFiltro}`;
       const rootFolder = zip.folder(folderName);
-      
       if (!rootFolder) return;
 
-      for (const envio of filtered) {
+      for (const envio of target) {
         try {
           const response = await fetch(envio.arquivo_url);
           const blob = await response.blob();
-          
           const igrejaFolder = rootFolder.folder(envio.igreja_nome);
           igrejaFolder?.file(envio.arquivo_nome, blob);
         } catch (err) {
           console.error("Erro ao baixar arquivo:", envio.arquivo_nome, err);
         }
       }
-      
+
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, `${folderName}.zip`);
     } catch (err) {
@@ -70,6 +90,37 @@ const AdminPrinting: React.FC = () => {
     } finally {
       setIsZipping(false);
     }
+  };
+
+  const handlePrintSelected = async () => {
+    const target = selectedEnvios.length > 0 ? selectedEnvios : filtered;
+    if (target.length === 0) return;
+
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+
+    printWindow.document.write(`<html><head><title>Imprimir Documentos</title><style>
+      body { margin: 0; padding: 0; }
+      .page { page-break-after: always; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+      .page:last-child { page-break-after: auto; }
+      img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+      iframe { width: 100%; height: 100vh; border: none; }
+    </style></head><body>`);
+
+    for (const envio of target) {
+      const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(envio.arquivo_nome);
+      if (isImage) {
+        printWindow.document.write(`<div class="page"><img src="${envio.arquivo_url}" alt="${envio.arquivo_nome}" /></div>`);
+      } else {
+        printWindow.document.write(`<div class="page"><iframe src="${envio.arquivo_url}"></iframe></div>`);
+      }
+    }
+
+    printWindow.document.write(`</body></html>`);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      setTimeout(() => printWindow.print(), 500);
+    };
   };
 
   return (
