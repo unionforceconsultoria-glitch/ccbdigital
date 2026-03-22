@@ -3,13 +3,37 @@ import { igrejas, distribuicoes } from "@/data/churches";
 import { useEnvios, getMesReferencia } from "@/lib/storage";
 import { BarChart3, ChevronDown } from "lucide-react";
 
+const meses = [
+  { value: "01", label: "Janeiro" },
+  { value: "02", label: "Fevereiro" },
+  { value: "03", label: "Março" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Maio" },
+  { value: "06", label: "Junho" },
+  { value: "07", label: "Julho" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Setembro" },
+  { value: "10", label: "Outubro" },
+  { value: "11", label: "Novembro" },
+  { value: "12", label: "Dezembro" },
+];
+
+const getYears = () => {
+  const current = new Date().getFullYear();
+  return [current - 1, current, current + 1];
+};
+
 const AdminDistribution: React.FC = () => {
   const [filtro, setFiltro] = useState("");
   const { data: envios = [] } = useEnvios();
-  const mesAtual = getMesReferencia();
+  const mesAtualDefault = getMesReferencia();
+  const [mesSelecionado, setMesSelecionado] = useState(mesAtualDefault);
+
+  const [anoStr, mesStr] = mesSelecionado.split("-");
+  const mesLabel = meses.find((m) => m.value === mesStr)?.label || mesStr;
 
   const igrejasQueEnviaram = new Set(
-    envios.filter((e) => e.mes_referencia === mesAtual).map((e) => e.igreja_id)
+    envios.filter((e) => e.mes_referencia === mesSelecionado).map((e) => e.igreja_id)
   );
 
   const distData = distribuicoes
@@ -25,8 +49,39 @@ const AdminDistribution: React.FC = () => {
       <div className="bg-background rounded-2xl card-shadow p-4">
         <h3 className="font-bold text-primary flex items-center gap-2 mb-3">
           <BarChart3 className="w-5 h-5" />
-          Dashboard por Distribuição
+          Dashboard por Distribuição — {mesLabel} / {anoStr}
         </h3>
+
+        {/* Month selector */}
+        <label className="text-xs font-semibold text-muted-foreground mb-2 block">Mês de Referência</label>
+        <div className="flex gap-2 mb-3">
+          <div className="relative flex-1">
+            <select
+              value={mesStr}
+              onChange={(e) => setMesSelecionado(`${anoStr}-${e.target.value}`)}
+              className="w-full touch-target px-4 rounded-xl bg-secondary border-0 text-sm appearance-none cursor-pointer"
+            >
+              {meses.map((m) => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          </div>
+          <div className="relative w-28">
+            <select
+              value={anoStr}
+              onChange={(e) => setMesSelecionado(`${e.target.value}-${mesStr}`)}
+              className="w-full touch-target px-4 rounded-xl bg-secondary border-0 text-sm appearance-none cursor-pointer"
+            >
+              {getYears().map((y) => (
+                <option key={y} value={String(y)}>{y}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Distribution filter */}
         <div className="relative">
           <select
             value={filtro}
@@ -52,7 +107,6 @@ const AdminDistribution: React.FC = () => {
                 {dist.enviaram}/{dist.total}
               </span>
             </div>
-            {/* Progress bar */}
             <div className="w-full h-4 bg-secondary rounded-full overflow-hidden">
               <div
                 className="h-full rounded-full transition-all duration-500"
