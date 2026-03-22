@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { igrejas, tiposFormulario } from "@/data/churches";
 import { useEnvios } from "@/lib/storage";
-import { Download, Printer, FileText, Search, Archive } from "lucide-react";
+import { Download, Printer, FileText, Search, Archive, CheckSquare, Square } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
