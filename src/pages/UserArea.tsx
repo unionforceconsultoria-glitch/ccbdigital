@@ -284,9 +284,33 @@ const UserArea: React.FC = () => {
                   className="hidden"
                 />
                 {arquivo && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-foreground bg-secondary rounded-lg px-3 py-2">
-                    <FileText className="w-4 h-4 text-primary" />
-                    <span className="truncate">{arquivo.name}</span>
+                  <div className="mt-2 relative overflow-hidden rounded-lg">
+                    <div className={`flex items-center gap-2 text-sm text-foreground px-3 py-2 ${scanComplete ? 'bg-green-50 dark:bg-green-950/30' : 'bg-secondary'} transition-colors duration-300`}>
+                      {isScanning ? (
+                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                      ) : scanComplete ? (
+                        <Check className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-primary" />
+                      )}
+                      <span className="truncate">{arquivo.name}</span>
+                      {scanComplete && (
+                        <span className="ml-auto text-xs font-semibold text-green-600 whitespace-nowrap">
+                          Carregado ✓
+                        </span>
+                      )}
+                    </div>
+                    {/* Scanning bar animation */}
+                    {isScanning && (
+                      <motion.div
+                        initial={{ x: "-100%" }}
+                        animate={{ x: "100%" }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                      >
+                        <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+                      </motion.div>
+                    )}
                   </div>
                 )}
               </div>
