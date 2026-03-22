@@ -71,6 +71,7 @@ const UserArea: React.FC = () => {
     if (!igreja) return;
 
     try {
+      setIsUploading(true);
       const envio = await addEnvio.mutateAsync({
         igreja_id: igreja.id,
         igreja_nome: igreja.nome,
@@ -86,6 +87,8 @@ const UserArea: React.FC = () => {
     } catch (err) {
       console.error(err);
       setError("Erro ao enviar documento. Tente novamente.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -97,6 +100,8 @@ const UserArea: React.FC = () => {
     setArquivo(null);
     setProtocolo(null);
     setError("");
+    setIsScanning(false);
+    setScanComplete(false);
   };
 
   return (
