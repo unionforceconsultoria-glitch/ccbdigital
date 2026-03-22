@@ -35,6 +35,9 @@ const UserArea: React.FC = () => {
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
