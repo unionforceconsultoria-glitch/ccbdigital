@@ -46,7 +46,15 @@ const UserArea: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setArquivo(e.target.files[0]);
+      const file = e.target.files[0];
+      setArquivo(file);
+      setScanComplete(false);
+      setIsScanning(true);
+      // Simulate scanning animation
+      setTimeout(() => {
+        setIsScanning(false);
+        setScanComplete(true);
+      }, 1500);
     }
   };
 
