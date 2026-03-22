@@ -343,7 +343,6 @@ const UserArea: React.FC = () => {
                   </>
                 )}
               </motion.button>
-              </motion.button>
             </motion.form>
           )}
         </AnimatePresence>
