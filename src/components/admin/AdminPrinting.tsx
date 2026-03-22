@@ -163,10 +163,23 @@ const AdminPrinting: React.FC = () => {
 
       {/* Results */}
       <div className="bg-background rounded-2xl card-shadow p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-bold text-primary">
-            {filtered.length} documento{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
-          </h3>
+        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            {filtered.length > 0 && (
+              <button
+                onClick={toggleSelectAll}
+                className="text-sm font-semibold text-primary flex items-center gap-1"
+              >
+                {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+                {allSelected ? "Desmarcar" : "Selecionar todos"}
+              </button>
+            )}
+            <h3 className="font-bold text-primary text-sm">
+              {selectedEnvios.length > 0
+                ? `${selectedEnvios.length} selecionado${selectedEnvios.length !== 1 ? "s" : ""}`
+                : `${filtered.length} documento${filtered.length !== 1 ? "s" : ""}`}
+            </h3>
+          </div>
           {filtered.length > 0 && (
             <div className="flex items-center gap-3">
               <button
@@ -178,7 +191,7 @@ const AdminPrinting: React.FC = () => {
                 {isZipping ? "Gerando..." : "Baixar ZIP"}
               </button>
               <button
-                onClick={() => window.print()}
+                onClick={handlePrintSelected}
                 className="text-sm font-semibold text-primary flex items-center gap-1 hover:brightness-110"
               >
                 <Printer className="w-4 h-4" />
@@ -194,29 +207,39 @@ const AdminPrinting: React.FC = () => {
           </p>
         ) : (
           <div className="space-y-2">
-            {filtered.map((envio) => (
-              <div
-                key={envio.id}
-                className="flex items-center justify-between bg-secondary rounded-xl px-4 py-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-primary shrink-0" />
-                    <span className="text-sm font-semibold truncate">{envio.igreja_nome}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1 truncate">
-                    {envio.tipo_formulario} · {envio.protocolo}
-                  </p>
-                </div>
-                <a
-                  href={envio.arquivo_url}
-                  download={envio.arquivo_nome}
-                  className="text-primary hover:text-primary/80 shrink-0 ml-2"
+            {filtered.map((envio) => {
+              const isSelected = selectedIds.has(envio.id);
+              return (
+                <div
+                  key={envio.id}
+                  onClick={() => toggleSelect(envio.id)}
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer transition-colors ${
+                    isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "bg-secondary"
+                  }`}
                 >
-                  <Download className="w-5 h-5" />
-                </a>
-              </div>
-            ))}
+                  <button className="shrink-0 text-primary">
+                    {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-primary shrink-0" />
+                      <span className="text-sm font-semibold truncate">{envio.igreja_nome}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {envio.tipo_formulario} · {envio.protocolo}
+                    </p>
+                  </div>
+                  <a
+                    href={envio.arquivo_url}
+                    download={envio.arquivo_nome}
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-primary hover:text-primary/80 shrink-0"
+                  >
+                    <Download className="w-5 h-5" />
+                  </a>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
