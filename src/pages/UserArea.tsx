@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { igrejas, tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin } from "@/lib/storage";
-import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield } from "lucide-react";
+import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 
 const meses = [
@@ -35,6 +35,9 @@ const UserArea: React.FC = () => {
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanComplete, setScanComplete] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
@@ -43,7 +46,15 @@ const UserArea: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setArquivo(e.target.files[0]);
+      const file = e.target.files[0];
+      setArquivo(file);
+      setScanComplete(false);
+      setIsScanning(true);
+      // Simulate scanning animation
+      setTimeout(() => {
+        setIsScanning(false);
+        setScanComplete(true);
+      }, 1500);
     }
   };
 
@@ -60,6 +71,7 @@ const UserArea: React.FC = () => {
     if (!igreja) return;
 
     try {
+      setIsUploading(true);
       const envio = await addEnvio.mutateAsync({
         igreja_id: igreja.id,
         igreja_nome: igreja.nome,
@@ -75,6 +87,8 @@ const UserArea: React.FC = () => {
     } catch (err) {
       console.error(err);
       setError("Erro ao enviar documento. Tente novamente.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -86,6 +100,8 @@ const UserArea: React.FC = () => {
     setArquivo(null);
     setProtocolo(null);
     setError("");
+    setIsScanning(false);
+    setScanComplete(false);
   };
 
   return (
@@ -268,9 +284,33 @@ const UserArea: React.FC = () => {
                   className="hidden"
                 />
                 {arquivo && (
-                  <div className="mt-2 flex items-center gap-2 text-sm text-foreground bg-secondary rounded-lg px-3 py-2">
-                    <FileText className="w-4 h-4 text-primary" />
-                    <span className="truncate">{arquivo.name}</span>
+                  <div className="mt-2 relative overflow-hidden rounded-lg">
+                    <div className={`flex items-center gap-2 text-sm text-foreground px-3 py-2 ${scanComplete ? 'bg-green-50 dark:bg-green-950/30' : 'bg-secondary'} transition-colors duration-300`}>
+                      {isScanning ? (
+                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                      ) : scanComplete ? (
+                        <Check className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <FileText className="w-4 h-4 text-primary" />
+                      )}
+                      <span className="truncate">{arquivo.name}</span>
+                      {scanComplete && (
+                        <span className="ml-auto text-xs font-semibold text-green-600 whitespace-nowrap">
+                          Carregado ✓
+                        </span>
+                      )}
+                    </div>
+                    {/* Scanning bar animation */}
+                    {isScanning && (
+                      <motion.div
+                        initial={{ x: "-100%" }}
+                        animate={{ x: "100%" }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                      >
+                        <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+                      </motion.div>
+                    )}
                   </div>
                 )}
               </div>
@@ -288,10 +328,20 @@ const UserArea: React.FC = () => {
               <motion.button
                 type="submit"
                 whileTap={{ scale: 0.96 }}
-                className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 transition-all hover:brightness-110"
+                disabled={isUploading}
+                className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-70"
               >
-                <Upload className="w-5 h-5" />
-                ENVIAR DOCUMENTO
+                {isUploading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    ENVIANDO...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    ENVIAR DOCUMENTO
+                  </>
+                )}
               </motion.button>
             </motion.form>
           )}
