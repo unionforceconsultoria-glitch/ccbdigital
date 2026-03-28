@@ -6,6 +6,59 @@ import { useAddEnvio, useDocumentosAdmin } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 
+// Função para comprimir fotos tiradas de celular antes de enviar
+const compressImage = async (file: File): Promise<File> => {
+  if (!file.type.startsWith('image/')) return file;
+  
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1200;
+        const MAX_HEIGHT = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob((blob) => {
+          if (blob) {
+             const newFile = new File([blob], file.name, {
+               type: 'image/jpeg',
+               lastModified: Date.now(),
+             });
+             resolve(newFile);
+          } else {
+             resolve(file);
+          }
+        }, 'image/jpeg', 0.7); // 70% quality
+      };
+      if (typeof event.target?.result === 'string') {
+        img.src = event.target.result;
+      }
+    };
+    reader.onerror = () => resolve(file); // se falhar, retorna original
+    reader.readAsDataURL(file);
+  });
+};
+
 const meses = [
   { value: "01", label: "Janeiro" },
   { value: "02", label: "Fevereiro" },
@@ -44,17 +97,24 @@ const UserArea: React.FC = () => {
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
   const addEnvio = useAddEnvio();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setArquivo(file);
+      let file = e.target.files[0];
       setScanComplete(false);
       setIsScanning(true);
-      // Simulate scanning animation
-      setTimeout(() => {
-        setIsScanning(false);
-        setScanComplete(true);
-      }, 1500);
+      
+      try {
+        // Comprimir imediatamente a imagem no navegador se for uma foto
+        if (file.type.startsWith('image/')) {
+          file = await compressImage(file);
+        }
+      } catch (err) {
+        console.error("Erro ao comprimir", err);
+      }
+      
+      setArquivo(file);
+      setIsScanning(false);
+      setScanComplete(true);
     }
   };
 
