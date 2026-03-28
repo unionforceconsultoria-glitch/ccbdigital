@@ -14,8 +14,8 @@ jobs:
     steps:
       - name: Ping Supabase REST API
         env:
-          SUPABASE_URL: "https://wypeqsycmckfmotjllpm.supabase.co"
-          SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5cGVxc3ljbWNrZm1vdGpsbHBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNzExNjgsImV4cCI6MjA4OTY0NzE2OH0.T1fDgPHI0LpjUUeR3kH5qKQtxODo2ZRLA3kMl4LOFr8"
+          SUPABASE_URL: "https://plpwbrwvxnqbxqdtmgqw.supabase.co"
+          SUPABASE_ANON_KEY: "sb_publishable_ihGul-9h1wunK7mmQLYoFg_kmFdpGoE"
         run: |
           echo "Pinging Supabase at $SUPABASE_URL..."
           RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$SUPABASE_URL/rest/v1/" \
