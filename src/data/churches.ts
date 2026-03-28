@@ -66,7 +66,7 @@ export const tiposFormulario = [
   "14.6 Alteração de cadastro de bens",
   "14.7 Movimentação interna de bens",
   "14.8 Movimento mensal de bens",
-  "Declaração de bens móveis N.F",
+  "14.9 Declaração de bens móveis N.F",
 ];
 
 export const distribuicoes = [

@@ -125,7 +125,7 @@ export const useDocumentosAdmin = () => {
       const { data, error } = await supabase
         .from('documentos_admin')
         .select('*')
-        .order('data_upload', { ascending: false });
+        .order('nome', { ascending: true });
       if (error) throw error;
       return (data || []) as DocumentoAdmin[];
     },
