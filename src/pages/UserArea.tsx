@@ -458,14 +458,20 @@ const UserArea: React.FC = () => {
                 .map((doc) => (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between bg-secondary rounded-xl px-4 py-3"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between bg-secondary/70 border-l-4 border-l-primary rounded-xl p-4 gap-4"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <FileText className="w-5 h-5 text-primary shrink-0" />
-                      <div className="min-w-0">
-                        <span className="text-sm font-medium truncate block">{doc.nome}</span>
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className="p-2 bg-primary/10 rounded-lg shrink-0 mt-0.5">
+                        <FileText className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-base font-bold text-foreground break-words leading-tight block">
+                          {doc.nome}
+                        </span>
                         {doc.categoria && (
-                          <span className="text-xs text-muted-foreground">{doc.categoria}</span>
+                          <span className="inline-block mt-1.5 px-2 py-0.5 bg-background rounded text-xs font-medium text-muted-foreground">
+                            {doc.categoria}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -486,9 +492,10 @@ const UserArea: React.FC = () => {
                           window.open(doc.arquivo_url, "_blank");
                         }
                       }}
-                      className="text-primary hover:text-primary/80 shrink-0"
+                      className="w-full sm:w-auto touch-target bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl px-4 py-3 flex items-center justify-center gap-2 text-sm font-bold shadow-sm transition-all"
                     >
                       <Download className="w-5 h-5" />
+                      BAIXAR DOCUMENTO
                     </button>
                   </div>
                 ))}
