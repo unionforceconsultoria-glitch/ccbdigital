@@ -1,0 +1,30 @@
+name: Supabase Keep Alive
+
+on:
+  schedule:
+    # Runs at 10:00 UTC every day (07:00 Brasilia Time)
+    - cron: '0 10 * * *'
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: "https://wypeqsycmckfmotjllpm.supabase.co"
+          SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5cGVxc3ljbWNrZm1vdGpsbHBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNzExNjgsImV4cCI6MjA4OTY0NzE2OH0.T1fDgPHI0LpjUUeR3kH5qKQtxODo2ZRLA3kMl4LOFr8"
+        run: |
+          echo "Pinging Supabase at $SUPABASE_URL..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$SUPABASE_URL/rest/v1/" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          
+          if [ "$RESPONSE" -eq 200 ]; then
+            echo "Successfully pinged Supabase API! Status code: 200"
+          else
+            echo "Failed to ping Supabase API. Status code: $RESPONSE"
+            exit 1
+          fi
