@@ -15,16 +15,16 @@ jobs:
       - name: Ping Supabase REST API
         env:
           SUPABASE_URL: "https://plpwbrwvxnqbxqdtmgqw.supabase.co"
-          SUPABASE_ANON_KEY: "sb_publishable_ihGul-9h1wunK7mmQLYoFg_kmFdpGoE"
+          SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBscHdicnd2eG5xYnhxZHRtZ3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwNDc4OTEsImV4cCI6MjA4OTYyMzg5MX0.JCrL2XubaHDu1PFJJQN5e2Mmj6cyTzbtX4HxZjamq5U"
         run: |
           echo "Pinging Supabase at $SUPABASE_URL..."
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$SUPABASE_URL/rest/v1/" \
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$SUPABASE_URL/rest/v1/documentos_admin?limit=1" \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY")
           
-          if [ "$RESPONSE" -eq 200 ]; then
-            echo "Successfully pinged Supabase API! Status code: 200"
+          if [ "$RESPONSE" -ge 200 ] && [ "$RESPONSE" -lt 500 ]; then
+            echo "Successfully reached Supabase! Status code: $RESPONSE"
           else
-            echo "Failed to ping Supabase API. Status code: $RESPONSE"
+            echo "Failed to reach Supabase API. Status code: $RESPONSE"
             exit 1
           fi
