@@ -4,7 +4,7 @@ export interface Igreja {
   distribuicao: string;
 }
 
-export const igrejas: Igreja[] = [
+export const igrejas: Igreja[] = ([
   { id: 1, nome: "Eldorado", distribuicao: "VALTER / ENÉIAS" },
   { id: 2, nome: "G. Campos", distribuicao: "VALTER / ENÉIAS" },
   { id: 3, nome: "Jd. Estrela", distribuicao: "VALTER / ENÉIAS" },
@@ -55,7 +55,7 @@ export const igrejas: Igreja[] = [
   { id: 43, nome: "São Carlos", distribuicao: "DEBORA" },
   { id: 44, nome: "Maria Serante", distribuicao: "DEBORA" },
   { id: 45, nome: "Parque da Fraternidade", distribuicao: "DEBORA" },
-];
+] as Igreja[]).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
 export const tiposFormulario = [
   "14.1 Declaração de bens móveis",
