@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { igrejas, tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin } from "@/lib/storage";
-import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
+import { ScanLine, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
+import DocumentScanner from "@/components/DocumentScanner";
 
 // Função para comprimir fotos tiradas de celular antes de enviar
 const compressImage = async (file: File): Promise<File> => {
@@ -91,8 +92,8 @@ const UserArea: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
 
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
   const addEnvio = useAddEnvio();
@@ -116,6 +117,12 @@ const UserArea: React.FC = () => {
       setIsScanning(false);
       setScanComplete(true);
     }
+  };
+
+  const handleScannerCapture = (file: File) => {
+    setArquivo(file);
+    setIsScanning(false);
+    setScanComplete(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -312,11 +319,11 @@ const UserArea: React.FC = () => {
                   <motion.button
                     type="button"
                     whileTap={{ scale: 0.96 }}
-                    onClick={() => cameraRef.current?.click()}
-                    className="flex-1 touch-target bg-secondary rounded-xl flex items-center justify-center gap-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                    onClick={() => setScannerOpen(true)}
+                    className="flex-1 touch-target bg-primary text-primary-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all"
                   >
-                    <Camera className="w-5 h-5" />
-                    Câmera
+                    <ScanLine className="w-5 h-5" />
+                    Escanear
                   </motion.button>
                   <motion.button
                     type="button"
@@ -328,14 +335,6 @@ const UserArea: React.FC = () => {
                     Arquivo
                   </motion.button>
                 </div>
-                <input
-                  ref={cameraRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
                 <input
                   ref={fileRef}
                   type="file"
