@@ -47,7 +47,7 @@ const Login: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <span className="text-primary-foreground font-bold text-2xl">ADMIN</span>
+            <span className="text-primary-foreground font-bold text-2xl">CCB</span>
           </div>
           <h1 className="text-2xl font-bold text-primary tracking-tight">
             Acesso Administrativo
