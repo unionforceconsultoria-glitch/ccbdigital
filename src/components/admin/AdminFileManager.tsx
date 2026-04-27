@@ -12,6 +12,7 @@ const mesesNomes: Record<string, string> = {
 
 const AdminFileManager: React.FC = () => {
   const { data: envios = [] } = useEnvios();
+  const { data: igrejas = [] } = useIgrejas();
   const removeEnvio = useRemoveEnvio();
   const [openIgreja, setOpenIgreja] = useState<number | null>(null);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
