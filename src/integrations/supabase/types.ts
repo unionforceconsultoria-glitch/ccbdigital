@@ -77,6 +77,54 @@ export type Database = {
         }
         Relationships: []
       }
+      igrejas_custom: {
+        Row: {
+          created_at: string
+          distribuicao: string
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          distribuicao: string
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          distribuicao?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      igrejas_overrides: {
+        Row: {
+          distribuicao: string | null
+          hidden: boolean
+          id: number
+          nome: string | null
+          updated_at: string
+        }
+        Insert: {
+          distribuicao?: string | null
+          hidden?: boolean
+          id: number
+          nome?: string | null
+          updated_at?: string
+        }
+        Update: {
+          distribuicao?: string | null
+          hidden?: boolean
+          id?: number
+          nome?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
