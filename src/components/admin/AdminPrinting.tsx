@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { tiposFormulario } from "@/data/churches";
-import { useEnvios } from "@/lib/storage";
+import { useEnvios, useIgrejas } from "@/lib/storage";
 import { Download, Printer, FileText, Search, Archive, CheckSquare, Square } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -28,6 +28,7 @@ const AdminPrinting: React.FC = () => {
   const [mesFiltro, setMesFiltro] = useState(defaultMonth);
   const [igrejaFiltro, setIgrejaFiltro] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("");
+  const { data: igrejas = [] } = useIgrejas();
   const [isZipping, setIsZipping] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
