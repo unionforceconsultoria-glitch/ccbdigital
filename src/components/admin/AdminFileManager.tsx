@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { igrejas } from "@/data/churches";
+import { useIgrejas } from "@/lib/storage";
 import { useEnvios, useRemoveEnvio } from "@/lib/storage";
 import { ChevronRight, ChevronDown, FileText, Trash2, FolderOpen, Church, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
