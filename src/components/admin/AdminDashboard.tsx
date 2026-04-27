@@ -1,6 +1,5 @@
 import React, { useState } from "react";
-import { igrejas } from "@/data/churches";
-import { useEnvios, getMesReferencia } from "@/lib/storage";
+import { useEnvios, getMesReferencia, useIgrejas } from "@/lib/storage";
 import { Church, ChevronDown } from "lucide-react";
 
 const meses = [
@@ -25,6 +24,7 @@ const getYears = () => {
 
 const AdminDashboard: React.FC = () => {
   const { data: envios = [] } = useEnvios();
+  const { data: igrejas = [] } = useIgrejas();
   const mesAtualDefault = getMesReferencia();
   const [mesSelecionado, setMesSelecionado] = useState(mesAtualDefault);
 

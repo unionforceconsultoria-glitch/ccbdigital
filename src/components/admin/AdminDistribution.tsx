@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { igrejas, distribuicoes } from "@/data/churches";
-import { useEnvios, getMesReferencia } from "@/lib/storage";
+import { distribuicoes } from "@/data/churches";
+import { useEnvios, getMesReferencia, useIgrejas } from "@/lib/storage";
 import { BarChart3, ChevronDown } from "lucide-react";
 
 const meses = [
@@ -26,6 +26,7 @@ const getYears = () => {
 const AdminDistribution: React.FC = () => {
   const [filtro, setFiltro] = useState("");
   const { data: envios = [] } = useEnvios();
+  const { data: igrejas = [] } = useIgrejas();
   const mesAtualDefault = getMesReferencia();
   const [mesSelecionado, setMesSelecionado] = useState(mesAtualDefault);
 

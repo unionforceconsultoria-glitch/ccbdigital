@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { igrejas } from "@/data/churches";
+import { useIgrejas } from "@/lib/storage";
 import { useEnvios, useRemoveEnvio } from "@/lib/storage";
 import { ChevronRight, ChevronDown, FileText, Trash2, FolderOpen, Church, Calendar } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,7 @@ const mesesNomes: Record<string, string> = {
 
 const AdminFileManager: React.FC = () => {
   const { data: envios = [] } = useEnvios();
+  const { data: igrejas = [] } = useIgrejas();
   const removeEnvio = useRemoveEnvio();
   const [openIgreja, setOpenIgreja] = useState<number | null>(null);
   const [openMonth, setOpenMonth] = useState<string | null>(null);
