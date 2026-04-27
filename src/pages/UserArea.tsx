@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { igrejas, tiposFormulario } from "@/data/churches";
-import { useAddEnvio, useDocumentosAdmin } from "@/lib/storage";
+import { tiposFormulario } from "@/data/churches";
+import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
 import { ScanLine, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 import DocumentScanner from "@/components/DocumentScanner";
@@ -96,6 +96,7 @@ const UserArea: React.FC = () => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
+  const { data: igrejas = [] } = useIgrejas();
   const addEnvio = useAddEnvio();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
