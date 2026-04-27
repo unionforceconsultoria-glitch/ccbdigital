@@ -101,11 +101,36 @@ const AdminPrinting: React.FC = () => {
     if (!printWindow) return;
 
     printWindow.document.write(`<html><head><title>Imprimir Documentos</title><style>
-      body { margin: 0; padding: 0; }
-      .page { page-break-after: always; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-      .page:last-child { page-break-after: auto; }
-      img { max-width: 100%; max-height: 100vh; object-fit: contain; }
-      iframe { width: 100%; height: 100vh; border: none; }
+      @page { size: A4; margin: 0; }
+      html, body { margin: 0; padding: 0; width: 210mm; height: 297mm; }
+      * { box-sizing: border-box; }
+      .page {
+        width: 210mm;
+        height: 297mm;
+        page-break-after: always;
+        page-break-inside: avoid;
+        break-after: page;
+        break-inside: avoid;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        padding: 5mm;
+      }
+      .page:last-child { page-break-after: auto; break-after: auto; }
+      .page img {
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        display: block;
+      }
+      .page iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
     </style></head><body>`);
 
     for (const envio of target) {
