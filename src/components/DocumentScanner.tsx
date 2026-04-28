@@ -51,68 +51,138 @@ const loadOpenCV = (): Promise<void> => {
   return opencvLoadingPromise;
 };
 
-// Find largest 4-point contour from an image
+// Check if a quadrilateral is approximately convex and well-shaped
+const isGoodQuad = (pts: Point[], imgW: number, imgH: number): boolean => {
+  const ordered = orderPoints(pts);
+  const [tl, tr, br, bl] = ordered;
+  const w1 = distance(tl, tr);
+  const w2 = distance(bl, br);
+  const h1 = distance(tl, bl);
+  const h2 = distance(tr, br);
+  if (w1 < imgW * 0.2 || w2 < imgW * 0.2) return false;
+  if (h1 < imgH * 0.2 || h2 < imgH * 0.2) return false;
+  // Sides should be roughly parallel (similar lengths)
+  const wRatio = Math.min(w1, w2) / Math.max(w1, w2);
+  const hRatio = Math.min(h1, h2) / Math.max(h1, h2);
+  if (wRatio < 0.6 || hRatio < 0.6) return false;
+  // Check convexity via cross products
+  let sign = 0;
+  for (let i = 0; i < 4; i++) {
+    const a = ordered[i];
+    const b = ordered[(i + 1) % 4];
+    const c = ordered[(i + 2) % 4];
+    const cross = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+    if (i === 0) sign = Math.sign(cross);
+    else if (Math.sign(cross) !== sign) return false;
+  }
+  return true;
+};
+
+// Find largest 4-point contour. Tries multiple preprocessing strategies for robustness.
 const findDocumentCorners = (src: any): Point[] | null => {
   const cv = window.cv;
   const gray = new cv.Mat();
   const blurred = new cv.Mat();
-  const edges = new cv.Mat();
-  const contours = new cv.MatVector();
-  const hierarchy = new cv.Mat();
-  let result: Point[] | null = null;
+  let best: { pts: Point[]; area: number } | null = null;
+  const imgArea = src.rows * src.cols;
+  const imgW = src.cols;
+  const imgH = src.rows;
 
   try {
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
     cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-    cv.Canny(blurred, edges, 50, 150);
-    const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
-    cv.dilate(edges, edges, kernel);
-    kernel.delete();
 
-    cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+    // Generate multiple edge maps to handle varying lighting / contrast
+    const edgeMaps: any[] = [];
 
-    let maxArea = 0;
-    let bestApprox: any = null;
-    const imgArea = src.rows * src.cols;
+    // 1) Adaptive Canny based on median
+    const data = blurred.data;
+    let sum = 0;
+    const sample = Math.min(data.length, 5000);
+    const step = Math.max(1, Math.floor(data.length / sample));
+    let count = 0;
+    for (let i = 0; i < data.length; i += step) {
+      sum += data[i];
+      count++;
+    }
+    const mean = sum / count;
+    const lower = Math.max(0, Math.floor(0.66 * mean));
+    const upper = Math.min(255, Math.floor(1.33 * mean));
+    const e1 = new cv.Mat();
+    cv.Canny(blurred, e1, lower, upper);
+    edgeMaps.push(e1);
 
-    for (let i = 0; i < contours.size(); i++) {
-      const cnt = contours.get(i);
-      const area = cv.contourArea(cnt);
-      if (area < imgArea * 0.15) {
+    // 2) Fixed wide-range Canny (fallback)
+    const e2 = new cv.Mat();
+    cv.Canny(blurred, e2, 30, 100);
+    edgeMaps.push(e2);
+
+    // 3) Adaptive threshold (works well when document is white on dark)
+    const e3 = new cv.Mat();
+    cv.adaptiveThreshold(blurred, e3, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 10);
+    edgeMaps.push(e3);
+
+    const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(5, 5));
+
+    for (const edges of edgeMaps) {
+      // Close gaps in edges
+      cv.morphologyEx(edges, edges, cv.MORPH_CLOSE, kernel);
+      cv.dilate(edges, edges, kernel);
+
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+      // Collect contours sorted by area desc, examine top 10
+      const candidates: { cnt: any; area: number }[] = [];
+      for (let i = 0; i < contours.size(); i++) {
+        const cnt = contours.get(i);
+        const area = cv.contourArea(cnt);
+        if (area > imgArea * 0.1) candidates.push({ cnt, area });
+        else cnt.delete();
+      }
+      candidates.sort((a, b) => b.area - a.area);
+      const top = candidates.slice(0, 10);
+      const rest = candidates.slice(10);
+      rest.forEach((c) => c.cnt.delete());
+
+      for (const { cnt, area } of top) {
+        const peri = cv.arcLength(cnt, true);
+        // Try multiple epsilons to find a 4-point approximation
+        for (const eps of [0.02, 0.03, 0.04, 0.05, 0.06, 0.08]) {
+          const approx = new cv.Mat();
+          cv.approxPolyDP(cnt, approx, eps * peri, true);
+          if (approx.rows === 4) {
+            const pts: Point[] = [];
+            for (let j = 0; j < 4; j++) {
+              pts.push({ x: approx.data32S[j * 2], y: approx.data32S[j * 2 + 1] });
+            }
+            approx.delete();
+            if (isGoodQuad(pts, imgW, imgH)) {
+              if (!best || area > best.area) best = { pts, area };
+              break;
+            }
+          } else {
+            approx.delete();
+          }
+        }
         cnt.delete();
-        continue;
       }
-      const peri = cv.arcLength(cnt, true);
-      const approx = new cv.Mat();
-      cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-      if (approx.rows === 4 && area > maxArea) {
-        maxArea = area;
-        if (bestApprox) bestApprox.delete();
-        bestApprox = approx;
-      } else {
-        approx.delete();
-      }
-      cnt.delete();
+
+      contours.delete();
+      hierarchy.delete();
+      if (best) break; // good enough
     }
 
-    if (bestApprox) {
-      const pts: Point[] = [];
-      for (let i = 0; i < 4; i++) {
-        pts.push({ x: bestApprox.data32S[i * 2], y: bestApprox.data32S[i * 2 + 1] });
-      }
-      bestApprox.delete();
-      result = pts;
-    }
+    edgeMaps.forEach((m) => m.delete());
+    kernel.delete();
   } catch (err) {
     console.error("findDocumentCorners error", err);
   } finally {
     gray.delete();
     blurred.delete();
-    edges.delete();
-    contours.delete();
-    hierarchy.delete();
   }
-  return result;
+  return best ? best.pts : null;
 };
 
 // Order 4 points: top-left, top-right, bottom-right, bottom-left
