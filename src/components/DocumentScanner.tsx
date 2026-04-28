@@ -596,6 +596,14 @@ const DocumentScanner: React.FC<Props> = ({ open, onClose, onCapture }) => {
                   ? "Documento detectado — toque para capturar"
                   : "Posicione a folha sobre fundo escuro e bem iluminada"}
               </div>
+              {!detected && (
+                <div className="absolute bottom-24 left-4 right-4 bg-black/70 text-white text-xs px-4 py-3 rounded-xl text-center leading-relaxed">
+                  💡 <strong>Dica:</strong> coloque a folha sobre uma{" "}
+                  <strong>mesa escura</strong> (ou superfície de cor contrastante)
+                  e com <strong>boa iluminação</strong> para a detecção funcionar
+                  melhor.
+                </div>
+              )}
             </div>
           )}
 
