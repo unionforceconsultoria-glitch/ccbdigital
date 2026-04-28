@@ -292,7 +292,7 @@ const DocumentScanner: React.FC<Props> = ({ open, onClose, onCapture }) => {
   const [phase, setPhase] = useState<"camera" | "preview">("camera");
   const [previewCanvas, setPreviewCanvas] = useState<HTMLCanvasElement | null>(null);
   const [filteredCanvas, setFilteredCanvas] = useState<HTMLCanvasElement | null>(null);
-  const [filterMode, setFilterMode] = useState<FilterMode>("enhanced");
+  const [filterMode, setFilterMode] = useState<FilterMode>("color");
   const [error, setError] = useState<string | null>(null);
   const [detected, setDetected] = useState(false);
 
