@@ -587,8 +587,14 @@ const DocumentScanner: React.FC<Props> = ({ open, onClose, onCapture }) => {
                 style={{ left: "50%", top: "50%", transform: "translate(-50%, -50%)" }}
               />
               {/* Helper hint */}
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full">
-                Posicione o documento dentro do quadro verde
+              <div
+                className={`absolute top-4 left-1/2 -translate-x-1/2 text-white text-xs px-3 py-1.5 rounded-full transition-colors ${
+                  detected ? "bg-green-600/80" : "bg-black/60"
+                }`}
+              >
+                {detected
+                  ? "Documento detectado — toque para capturar"
+                  : "Posicione a folha sobre fundo escuro e bem iluminada"}
               </div>
             </div>
           )}
