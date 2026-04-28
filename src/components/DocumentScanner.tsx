@@ -294,6 +294,7 @@ const DocumentScanner: React.FC<Props> = ({ open, onClose, onCapture }) => {
   const [filteredCanvas, setFilteredCanvas] = useState<HTMLCanvasElement | null>(null);
   const [filterMode, setFilterMode] = useState<FilterMode>("enhanced");
   const [error, setError] = useState<string | null>(null);
+  const [detected, setDetected] = useState(false);
 
   // Load OpenCV when modal opens
   useEffect(() => {
@@ -427,8 +428,21 @@ const DocumentScanner: React.FC<Props> = ({ open, onClose, onCapture }) => {
             x: p.x / scale,
             y: p.y / scale,
           }));
+          setDetected(true);
         } else {
           lastCornersRef.current = null;
+          setDetected(false);
+          // Draw an A4 guide frame to help user position the page
+          const margin = 0.08;
+          const gx = overlay.width * margin;
+          const gy = overlay.height * margin;
+          const gw = overlay.width * (1 - 2 * margin);
+          const gh = overlay.height * (1 - 2 * margin);
+          ctx.lineWidth = 3 * window.devicePixelRatio;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.7)";
+          ctx.setLineDash([12 * window.devicePixelRatio, 8 * window.devicePixelRatio]);
+          ctx.strokeRect(gx, gy, gw, gh);
+          ctx.setLineDash([]);
         }
       }
 
