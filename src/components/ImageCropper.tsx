@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import Cropper, { Area } from "react-easy-crop";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, RotateCw, Loader2 } from "lucide-react";
+import { X, Check, RotateCw, Loader2, FileText, Maximize } from "lucide-react";
 
 interface Props {
   open: boolean;
@@ -67,6 +67,17 @@ const ImageCropper: React.FC<Props> = ({ open, file, onClose, onConfirm }) => {
   const [rotation, setRotation] = useState(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
   const [processing, setProcessing] = useState(false);
+  // A4 aspect (retrato): 210/297 ≈ 0.7071. Padrão A4 para ajudar a enquadrar.
+  const A4_PORTRAIT = 210 / 297;
+  const A4_LANDSCAPE = 297 / 210;
+  type AspectMode = "a4-portrait" | "a4-landscape" | "free";
+  const [aspectMode, setAspectMode] = useState<AspectMode>("a4-portrait");
+  const aspect =
+    aspectMode === "a4-portrait"
+      ? A4_PORTRAIT
+      : aspectMode === "a4-landscape"
+      ? A4_LANDSCAPE
+      : undefined;
 
   React.useEffect(() => {
     if (!file || !open) {
@@ -81,6 +92,7 @@ const ImageCropper: React.FC<Props> = ({ open, file, onClose, onConfirm }) => {
     setCrop({ x: 0, y: 0 });
     setZoom(1);
     setRotation(0);
+    setAspectMode("a4-portrait");
   }, [file, open]);
 
   const onCropComplete = useCallback((_: Area, areaPixels: Area) => {
@@ -133,7 +145,7 @@ const ImageCropper: React.FC<Props> = ({ open, file, onClose, onConfirm }) => {
               crop={crop}
               zoom={zoom}
               rotation={rotation}
-              aspect={undefined}
+              aspect={aspect}
               onCropChange={setCrop}
               onZoomChange={setZoom}
               onCropComplete={onCropComplete}
@@ -145,7 +157,47 @@ const ImageCropper: React.FC<Props> = ({ open, file, onClose, onConfirm }) => {
 
         {/* Hint */}
         <div className="bg-black/80 text-white text-xs text-center px-4 py-2">
-          Arraste para mover • Pince para aproximar • Use o botão acima para girar
+          Enquadre a folha dentro da moldura • Arraste para mover • Pince para aproximar
+        </div>
+
+        {/* Aspect selector */}
+        <div className="bg-black/80 px-4 pt-2 pb-1 flex gap-2 justify-center">
+          <button
+            type="button"
+            onClick={() => setAspectMode("a4-portrait")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              aspectMode === "a4-portrait"
+                ? "bg-white text-black"
+                : "bg-white/15 text-white"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            A4 em pé
+          </button>
+          <button
+            type="button"
+            onClick={() => setAspectMode("a4-landscape")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              aspectMode === "a4-landscape"
+                ? "bg-white text-black"
+                : "bg-white/15 text-white"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5 rotate-90" />
+            A4 deitado
+          </button>
+          <button
+            type="button"
+            onClick={() => setAspectMode("free")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              aspectMode === "free"
+                ? "bg-white text-black"
+                : "bg-white/15 text-white"
+            }`}
+          >
+            <Maximize className="w-3.5 h-3.5" />
+            Livre
+          </button>
         </div>
 
         {/* Zoom slider */}
