@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
-import { ScanLine, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
+import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check, Crop } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
-import DocumentScanner from "@/components/DocumentScanner";
+import ImageCropper from "@/components/ImageCropper";
 
 // Função para comprimir fotos tiradas de celular antes de enviar
 const compressImage = async (file: File): Promise<File> => {
@@ -92,38 +92,45 @@ const UserArea: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [scannerOpen, setScannerOpen] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [pendingImage, setPendingImage] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
   const { data: igrejas = [] } = useIgrejas();
   const addEnvio = useAddEnvio();
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      let file = e.target.files[0];
-      setScanComplete(false);
-      setIsScanning(true);
-      
-      try {
-        // Comprimir imediatamente a imagem no navegador se for uma foto
-        if (file.type.startsWith('image/')) {
-          file = await compressImage(file);
-        }
-      } catch (err) {
-        console.error("Erro ao comprimir", err);
-      }
-      
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    e.target.value = ""; // permite reabrir o mesmo arquivo
+
+    // Imagens passam pelo recorte; PDFs vão direto
+    if (file.type.startsWith("image/")) {
+      setPendingImage(file);
+      setCropperOpen(true);
+    } else {
       setArquivo(file);
-      setIsScanning(false);
       setScanComplete(true);
     }
   };
 
-  const handleScannerCapture = (file: File) => {
-    setArquivo(file);
-    setIsScanning(false);
-    setScanComplete(true);
+  const handleCropConfirm = async (cropped: File) => {
+    setCropperOpen(false);
+    setPendingImage(null);
+    setIsScanning(true);
+    setScanComplete(false);
+    try {
+      const compressed = await compressImage(cropped);
+      setArquivo(compressed);
+    } catch (err) {
+      console.error("Erro ao comprimir", err);
+      setArquivo(cropped);
+    } finally {
+      setIsScanning(false);
+      setScanComplete(true);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -174,10 +181,14 @@ const UserArea: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <DocumentScanner
-        open={scannerOpen}
-        onClose={() => setScannerOpen(false)}
-        onCapture={handleScannerCapture}
+      <ImageCropper
+        open={cropperOpen}
+        file={pendingImage}
+        onClose={() => {
+          setCropperOpen(false);
+          setPendingImage(null);
+        }}
+        onConfirm={handleCropConfirm}
       />
       {/* Header */}
       <div className="bg-primary px-4 py-4 flex items-center justify-between">
@@ -325,11 +336,11 @@ const UserArea: React.FC = () => {
                   <motion.button
                     type="button"
                     whileTap={{ scale: 0.96 }}
-                    onClick={() => setScannerOpen(true)}
+                    onClick={() => cameraRef.current?.click()}
                     className="flex-1 touch-target bg-primary text-primary-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all"
                   >
-                    <ScanLine className="w-5 h-5" />
-                    Escanear
+                    <Camera className="w-5 h-5" />
+                    Tirar foto
                   </motion.button>
                   <motion.button
                     type="button"
@@ -341,6 +352,14 @@ const UserArea: React.FC = () => {
                     Arquivo
                   </motion.button>
                 </div>
+                <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
                 <input
                   ref={fileRef}
                   type="file"
@@ -365,6 +384,19 @@ const UserArea: React.FC = () => {
                         </span>
                       )}
                     </div>
+                    {arquivo.type.startsWith("image/") && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPendingImage(arquivo);
+                          setCropperOpen(true);
+                        }}
+                        className="mt-2 w-full text-xs font-semibold text-primary flex items-center justify-center gap-1 py-1.5 hover:underline"
+                      >
+                        <Crop className="w-3.5 h-3.5" />
+                        Recortar novamente
+                      </button>
+                    )}
                     {/* Scanning bar animation */}
                     {isScanning && (
                       <motion.div
