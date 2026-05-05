@@ -47,6 +47,12 @@ export function getMesReferencia(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 }
 
+export function getMesAnterior(): string {
+  const now = new Date();
+  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 async function uploadFile(file: File, folder: string): Promise<string> {
   const ext = file.name.split('.').pop();
   const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
