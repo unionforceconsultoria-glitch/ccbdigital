@@ -196,7 +196,7 @@ const UserArea: React.FC = () => {
           <h1 className="text-primary-foreground font-bold text-lg tracking-tight">
             Patrimônio CCB Digital
           </h1>
-          <p className="text-primary-foreground/70 text-sm">Envio de Documentos</p>
+          <p className="text-primary-foreground/70 text-sm">Envio de Documentos · v1.4</p>
         </div>
         <motion.button
           whileTap={{ scale: 0.96 }}
