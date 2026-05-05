@@ -23,8 +23,10 @@ const getYears = () => {
   return [c - 1, c, c + 1];
 };
 
+const APP_URL = "https://ccbdigital.lovable.app";
+
 const TEMPLATE_DEFAULT = (mesLabel: string, ano: string, lista: string) =>
-  `🙏 *Patrimônio CCB Digital*\n\nPaz de Deus, irmãos!\n\nConstam pendentes o envio do formulário mensal de *${mesLabel}/${ano}* das seguintes igrejas:\n\n${lista}\n\nPor gentileza, providenciem o envio o quanto antes pelo aplicativo.\n\nDeus abençoe! 🕊️`;
+  `🙏 *Patrimônio CCB Digital*\n\nPaz de Deus, irmãos!\n\nConstam pendentes o envio do formulário mensal de *${mesLabel}/${ano}* das seguintes igrejas:\n\n${lista}\n\nPor gentileza, providenciem o envio o quanto antes pelo aplicativo.\n\n🔗 Acesse: ${APP_URL}\n\nDeus abençoe! 🕊️`;
 
 const AdminCobranca: React.FC = () => {
   const { data: envios = [] } = useEnvios();
@@ -48,7 +50,7 @@ const AdminCobranca: React.FC = () => {
   const gerarMensagem = () => {
     if (igrejasPendentes.length === 0) {
       setMensagem(
-        `🎉 *Patrimônio CCB Digital*\n\nTodas as igrejas já enviaram o formulário de *${mesLabel}/${anoStr}*!\n\nObrigado pela colaboração. Deus abençoe! 🙏`
+        `🎉 *Patrimônio CCB Digital*\n\nTodas as igrejas já enviaram o formulário de *${mesLabel}/${anoStr}*!\n\nObrigado pela colaboração. Deus abençoe! 🙏\n\n🔗 Acesse: ${APP_URL}`
       );
       return;
     }
