@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { MessageCircle, RefreshCw, Copy, ChevronDown, Check } from "lucide-react";
-import { useEnvios, useIgrejas, getMesReferencia } from "@/lib/storage";
+import { useEnvios, useIgrejas, getMesAnterior } from "@/lib/storage";
 
 const meses = [
   { value: "01", label: "Janeiro" },
@@ -29,7 +29,7 @@ const TEMPLATE_DEFAULT = (mesLabel: string, ano: string, lista: string) =>
 const AdminCobranca: React.FC = () => {
   const { data: envios = [] } = useEnvios();
   const { data: igrejas = [] } = useIgrejas();
-  const mesAtualDefault = getMesReferencia();
+  const mesAtualDefault = getMesAnterior();
   const [mesSelecionado, setMesSelecionado] = useState(mesAtualDefault);
   const [mensagem, setMensagem] = useState("");
   const [copied, setCopied] = useState(false);
