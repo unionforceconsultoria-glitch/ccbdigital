@@ -41,7 +41,7 @@ const AdminArea: React.FC = () => {
           <h1 className="text-primary-foreground font-bold text-lg tracking-tight">
             Painel Administrativo
           </h1>
-          <p className="text-primary-foreground/70 text-sm">Patrimônio CCB Digital</p>
+          <p className="text-primary-foreground/70 text-sm">Patrimônio CCB Digital · v1.4</p>
         </div>
         <motion.button
           whileTap={{ scale: 0.96 }}
