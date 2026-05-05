@@ -53,7 +53,7 @@ const Login: React.FC = () => {
             Acesso Administrativo
           </h1>
           <p className="text-muted-foreground mt-2 text-base">
-            Patrimônio CCB Digital
+            Patrimônio CCB Digital · v1.4
           </p>
         </div>
 
