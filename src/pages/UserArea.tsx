@@ -91,7 +91,6 @@ const UserArea: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
@@ -312,26 +311,15 @@ const UserArea: React.FC = () => {
                 <label className="block text-sm font-semibold text-foreground mb-2">
                   Arquivo (PDF ou Imagem)
                 </label>
-                <div className="flex gap-2">
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => cameraRef.current?.click()}
-                    className="flex-1 touch-target bg-primary text-primary-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all"
-                  >
-                    <Camera className="w-5 h-5" />
-                    Tirar foto
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.96 }}
-                    onClick={() => fileRef.current?.click()}
-                    className="flex-1 touch-target bg-secondary rounded-xl flex items-center justify-center gap-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-                  >
-                    <Upload className="w-5 h-5" />
-                    Arquivo
-                  </motion.button>
-                </div>
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => cameraRef.current?.click()}
+                  className="w-full touch-target bg-primary text-primary-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all"
+                >
+                  <Camera className="w-5 h-5" />
+                  Tirar foto
+                </motion.button>
                 <input
                   ref={cameraRef}
                   type="file"
@@ -340,15 +328,17 @@ const UserArea: React.FC = () => {
                   onChange={handleFileChange}
                   className="hidden"
                 />
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
                 {arquivo && (
                   <div className="mt-2 relative overflow-hidden rounded-lg">
+                    {arquivo.type.startsWith("image/") && (
+                      <div className="mx-auto bg-secondary rounded-lg overflow-hidden mb-2" style={{ aspectRatio: "210 / 297", maxWidth: "240px" }}>
+                        <img
+                          src={URL.createObjectURL(arquivo)}
+                          alt="Pré-visualização"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
                     <div className={`flex items-center gap-2 text-sm text-foreground px-3 py-2 ${scanComplete ? 'bg-green-50 dark:bg-green-950/30' : 'bg-secondary'} transition-colors duration-300`}>
                       {isScanning ? (
                         <Loader2 className="w-4 h-4 text-primary animate-spin" />
