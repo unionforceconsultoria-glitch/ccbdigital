@@ -1,10 +1,11 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
+import { autoScanDocument, preloadOpenCV } from "@/lib/autoDocScan";
 
 // Função para comprimir fotos tiradas de celular antes de enviar
 const compressImage = async (file: File): Promise<File> => {
@@ -93,6 +94,13 @@ const UserArea: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const [autoScanned, setAutoScanned] = useState(false);
+  const [originalImage, setOriginalImage] = useState<File | null>(null);
+
+  useEffect(() => {
+    // Pré-carrega OpenCV em background para detecção automática da folha
+    preloadOpenCV();
+  }, []);
 
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
   const { data: igrejas = [] } = useIgrejas();
@@ -106,8 +114,21 @@ const UserArea: React.FC = () => {
     if (file.type.startsWith("image/")) {
       setIsScanning(true);
       setScanComplete(false);
+      setAutoScanned(false);
+      setOriginalImage(file);
       try {
-        const compressed = await compressImage(file);
+        // Tenta detectar a folha automaticamente e corrigir perspectiva
+        let processed: File = file;
+        try {
+          const scanned = await autoScanDocument(file);
+          if (scanned) {
+            processed = scanned;
+            setAutoScanned(true);
+          }
+        } catch (err) {
+          console.warn("Auto-scan falhou, usando foto original", err);
+        }
+        const compressed = await compressImage(processed);
         setArquivo(compressed);
       } catch (err) {
         console.error("Erro ao comprimir", err);
@@ -119,6 +140,8 @@ const UserArea: React.FC = () => {
     } else {
       setArquivo(file);
       setScanComplete(true);
+      setAutoScanned(false);
+      setOriginalImage(null);
     }
   };
 
@@ -166,6 +189,21 @@ const UserArea: React.FC = () => {
     setError("");
     setIsScanning(false);
     setScanComplete(false);
+    setAutoScanned(false);
+    setOriginalImage(null);
+  };
+
+  const useOriginalPhoto = async () => {
+    if (!originalImage) return;
+    setIsScanning(true);
+    try {
+      const compressed = await compressImage(originalImage);
+      setArquivo(compressed);
+      setAutoScanned(false);
+    } finally {
+      setIsScanning(false);
+      setScanComplete(true);
+    }
   };
 
   return (
@@ -364,6 +402,21 @@ const UserArea: React.FC = () => {
                         </span>
                       )}
                     </div>
+                    {scanComplete && autoScanned && originalImage && (
+                      <div className="mt-2 flex items-center justify-between gap-2 px-3 py-2 bg-secondary rounded-lg">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 text-green-600" />
+                          Folha detectada e recortada
+                        </span>
+                        <button
+                          type="button"
+                          onClick={useOriginalPhoto}
+                          className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+                        >
+                          Usar foto original
+                        </button>
+                      </div>
+                    )}
                     {/* Scanning bar animation */}
                     {isScanning && (
                       <motion.div
