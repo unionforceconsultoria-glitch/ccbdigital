@@ -91,7 +91,6 @@ const UserArea: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
