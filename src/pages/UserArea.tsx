@@ -402,6 +402,21 @@ const UserArea: React.FC = () => {
                         </span>
                       )}
                     </div>
+                    {scanComplete && autoScanned && originalImage && (
+                      <div className="mt-2 flex items-center justify-between gap-2 px-3 py-2 bg-secondary rounded-lg">
+                        <span className="text-xs font-semibold text-foreground flex items-center gap-1">
+                          <Check className="w-3.5 h-3.5 text-green-600" />
+                          Folha detectada e recortada
+                        </span>
+                        <button
+                          type="button"
+                          onClick={useOriginalPhoto}
+                          className="text-xs font-semibold text-primary hover:underline whitespace-nowrap"
+                        >
+                          Usar foto original
+                        </button>
+                      </div>
+                    )}
                     {/* Scanning bar animation */}
                     {isScanning && (
                       <motion.div
