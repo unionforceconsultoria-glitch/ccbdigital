@@ -3,9 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
-import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check, Crop } from "lucide-react";
+import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
-import ImageCropper from "@/components/ImageCropper";
 
 // Função para comprimir fotos tiradas de celular antes de enviar
 const compressImage = async (file: File): Promise<File> => {
@@ -92,8 +91,6 @@ const UserArea: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [cropperOpen, setCropperOpen] = useState(false);
-  const [pendingImage, setPendingImage] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
@@ -106,29 +103,21 @@ const UserArea: React.FC = () => {
     const file = e.target.files[0];
     e.target.value = ""; // permite reabrir o mesmo arquivo
 
-    // Imagens passam pelo recorte; PDFs vão direto
     if (file.type.startsWith("image/")) {
-      setPendingImage(file);
-      setCropperOpen(true);
+      setIsScanning(true);
+      setScanComplete(false);
+      try {
+        const compressed = await compressImage(file);
+        setArquivo(compressed);
+      } catch (err) {
+        console.error("Erro ao comprimir", err);
+        setArquivo(file);
+      } finally {
+        setIsScanning(false);
+        setScanComplete(true);
+      }
     } else {
       setArquivo(file);
-      setScanComplete(true);
-    }
-  };
-
-  const handleCropConfirm = async (cropped: File) => {
-    setCropperOpen(false);
-    setPendingImage(null);
-    setIsScanning(true);
-    setScanComplete(false);
-    try {
-      const compressed = await compressImage(cropped);
-      setArquivo(compressed);
-    } catch (err) {
-      console.error("Erro ao comprimir", err);
-      setArquivo(cropped);
-    } finally {
-      setIsScanning(false);
       setScanComplete(true);
     }
   };
@@ -181,15 +170,6 @@ const UserArea: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <ImageCropper
-        open={cropperOpen}
-        file={pendingImage}
-        onClose={() => {
-          setCropperOpen(false);
-          setPendingImage(null);
-        }}
-        onConfirm={handleCropConfirm}
-      />
       {/* Header */}
       <div className="bg-primary px-4 py-4 flex items-center justify-between">
         <div>
@@ -384,19 +364,6 @@ const UserArea: React.FC = () => {
                         </span>
                       )}
                     </div>
-                    {arquivo.type.startsWith("image/") && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPendingImage(arquivo);
-                          setCropperOpen(true);
-                        }}
-                        className="mt-2 w-full text-xs font-semibold text-primary flex items-center justify-center gap-1 py-1.5 hover:underline"
-                      >
-                        <Crop className="w-3.5 h-3.5" />
-                        Recortar novamente
-                      </button>
-                    )}
                     {/* Scanning bar animation */}
                     {isScanning && (
                       <motion.div
