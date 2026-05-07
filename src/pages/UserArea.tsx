@@ -101,6 +101,7 @@ const UserArea: React.FC = () => {
     if (!e.target.files || !e.target.files[0]) return;
     const file = e.target.files[0];
     e.target.value = ""; // permite reabrir o mesmo arquivo
+    setError("");
 
     if (file.type.startsWith("image/")) {
       setIsScanning(true);
@@ -314,7 +315,11 @@ const UserArea: React.FC = () => {
                 <motion.button
                   type="button"
                   whileTap={{ scale: 0.96 }}
-                  onClick={() => cameraRef.current?.click()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setError("");
+                    cameraRef.current?.click();
+                  }}
                   className="w-full touch-target bg-primary text-primary-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all"
                 >
                   <Camera className="w-5 h-5" />
