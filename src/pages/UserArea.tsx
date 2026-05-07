@@ -92,6 +92,7 @@ const UserArea: React.FC = () => {
   const [scanComplete, setScanComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
   const { data: igrejas = [] } = useIgrejas();
@@ -325,11 +326,31 @@ const UserArea: React.FC = () => {
                   <Camera className="w-5 h-5" />
                   Tirar foto
                 </motion.button>
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.96 }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setError("");
+                    galleryRef.current?.click();
+                  }}
+                  className="mt-2 w-full touch-target bg-secondary text-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-95 transition-all border border-border"
+                >
+                  <Upload className="w-5 h-5" />
+                  Escolher da galeria
+                </motion.button>
                 <input
                   ref={cameraRef}
                   type="file"
                   accept="image/*"
                   capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <input
+                  ref={galleryRef}
+                  type="file"
+                  accept="image/*,application/pdf"
                   onChange={handleFileChange}
                   className="hidden"
                 />
