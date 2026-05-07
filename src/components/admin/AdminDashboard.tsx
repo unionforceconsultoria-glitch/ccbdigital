@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useEnvios, getMesAnterior, useIgrejas } from "@/lib/storage";
-import { Church, ChevronDown } from "lucide-react";
+import { Church, ChevronDown, FileDown } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const meses = [
   { value: "01", label: "Janeiro" },
@@ -39,6 +41,78 @@ const AdminDashboard: React.FC = () => {
   const enviados = igrejasQueEnviaram.size;
   const pendentes = totalIgrejas - enviados;
 
+  const gerarPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header band
+    doc.setFillColor(30, 30, 30);
+    doc.rect(0, 0, pageWidth, 28, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Patrimônio CCB Digital", 14, 12);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Relatório de Envio de Formulários", 14, 20);
+
+    // Subtitle
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Mês de Referência: ${mesLabel} / ${anoStr}`, 14, 40);
+
+    // Summary
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Total de igrejas: ${totalIgrejas}`, 14, 48);
+    doc.text(`Enviados: ${enviados}`, 70, 48);
+    doc.text(`Pendentes: ${pendentes}`, 120, 48);
+
+    const enviadasList = igrejas.filter((i) => igrejasQueEnviaram.has(i.id));
+    const pendentesList = igrejas.filter((i) => !igrejasQueEnviaram.has(i.id));
+
+    autoTable(doc, {
+      startY: 56,
+      head: [["#", "Igreja (Enviou)", "Distribuição"]],
+      body: enviadasList.map((i, idx) => [idx + 1, i.nome, i.distribuicao]),
+      theme: "grid",
+      headStyles: { fillColor: [34, 139, 87], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    });
+
+    const lastY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+
+    autoTable(doc, {
+      startY: lastY + 8,
+      head: [["#", "Igreja (Pendente)", "Distribuição"]],
+      body: pendentesList.map((i, idx) => [idx + 1, i.nome, i.distribuicao]),
+      theme: "grid",
+      headStyles: { fillColor: [180, 40, 40], textColor: 255, fontStyle: "bold" },
+      styles: { fontSize: 9, cellPadding: 2.5 },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+    });
+
+    // Footer with page numbers
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      const h = doc.internal.pageSize.getHeight();
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.text(
+        `Gerado em ${new Date().toLocaleString("pt-BR")}`,
+        14,
+        h - 8
+      );
+      doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, h - 8, { align: "right" });
+    }
+
+    doc.save(`relatorio-envios-${mesSelecionado}.pdf`);
+  };
+
   return (
     <div className="space-y-4">
       {/* Month selector */}
@@ -71,6 +145,15 @@ const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* PDF Report Button */}
+      <button
+        onClick={gerarPDF}
+        className="w-full touch-target bg-primary text-primary-foreground rounded-2xl card-shadow font-semibold flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors py-3"
+      >
+        <FileDown className="w-5 h-5" />
+        Gerar Relatório em PDF
+      </button>
 
       {/* Counters */}
       <div className="grid grid-cols-3 gap-3">
