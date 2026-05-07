@@ -313,32 +313,34 @@ const UserArea: React.FC = () => {
                 <label className="block text-sm font-semibold text-foreground mb-2">
                   Arquivo (PDF ou Imagem)
                 </label>
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.96 }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setError("");
-                    cameraRef.current?.click();
-                  }}
-                  className="w-full touch-target bg-primary text-primary-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all"
-                >
-                  <Camera className="w-5 h-5" />
-                  Tirar foto
-                </motion.button>
-                <motion.button
-                  type="button"
-                  whileTap={{ scale: 0.96 }}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setError("");
-                    galleryRef.current?.click();
-                  }}
-                  className="mt-2 w-full touch-target bg-secondary text-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-95 transition-all border border-border"
-                >
-                  <Upload className="w-5 h-5" />
-                  Escolher da galeria
-                </motion.button>
+                <div className="grid grid-cols-2 gap-2">
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.96 }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setError("");
+                      cameraRef.current?.click();
+                    }}
+                    className="touch-target bg-primary text-primary-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all"
+                  >
+                    <Camera className="w-5 h-5" />
+                    Tirar foto
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.96 }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setError("");
+                      galleryRef.current?.click();
+                    }}
+                    className="touch-target bg-secondary text-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-95 transition-all border border-border"
+                  >
+                    <Upload className="w-5 h-5" />
+                    Arquivo
+                  </motion.button>
+                </div>
                 <input
                   ref={cameraRef}
                   type="file"
