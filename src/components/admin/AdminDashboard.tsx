@@ -75,8 +75,8 @@ const AdminDashboard: React.FC = () => {
 
     autoTable(doc, {
       startY: 56,
-      head: [["#", "Igreja (Enviou)", "Distribuição"]],
-      body: enviadasList.map((i, idx) => [idx + 1, i.nome, i.distribuicao]),
+      head: [["#", "Igreja (Enviou)"]],
+      body: enviadasList.map((i, idx) => [idx + 1, i.nome]),
       theme: "grid",
       headStyles: { fillColor: [34, 139, 87], textColor: 255, fontStyle: "bold" },
       styles: { fontSize: 9, cellPadding: 2.5 },
@@ -87,8 +87,8 @@ const AdminDashboard: React.FC = () => {
 
     autoTable(doc, {
       startY: lastY + 8,
-      head: [["#", "Igreja (Pendente)", "Distribuição"]],
-      body: pendentesList.map((i, idx) => [idx + 1, i.nome, i.distribuicao]),
+      head: [["#", "Igreja (Pendente)"]],
+      body: pendentesList.map((i, idx) => [idx + 1, i.nome]),
       theme: "grid",
       headStyles: { fillColor: [180, 40, 40], textColor: 255, fontStyle: "bold" },
       styles: { fontSize: 9, cellPadding: 2.5 },
