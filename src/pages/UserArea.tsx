@@ -5,6 +5,7 @@ import { tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
+import TutorialModal from "@/components/TutorialModal";
 
 // Função para comprimir fotos tiradas de celular antes de enviar
 const compressImage = async (file: File): Promise<File> => {
