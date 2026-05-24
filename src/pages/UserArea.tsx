@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
-import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check } from "lucide-react";
+import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check, HelpCircle } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
+import TutorialModal from "@/components/TutorialModal";
 
 // Função para comprimir fotos tiradas de celular antes de enviar
 const compressImage = async (file: File): Promise<File> => {
@@ -91,6 +92,7 @@ const UserArea: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -171,6 +173,7 @@ const UserArea: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <TutorialModal forceOpen={showTutorial} onClose={() => setShowTutorial(false)} />
       {/* Header */}
       <div className="bg-primary px-4 py-4 flex items-center justify-between">
         <div>
@@ -179,6 +182,15 @@ const UserArea: React.FC = () => {
           </h1>
           <p className="text-primary-foreground/70 text-sm">Envio de Documentos · v1.4</p>
         </div>
+        <div className="flex items-center gap-1">
+        <motion.button
+          whileTap={{ scale: 0.96 }}
+          onClick={() => setShowTutorial(true)}
+          className="text-primary-foreground/70 hover:text-primary-foreground p-2"
+          title="Ver tutorial"
+        >
+          <HelpCircle className="w-5 h-5" />
+        </motion.button>
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={() => navigate("/admin/login")}
@@ -187,6 +199,7 @@ const UserArea: React.FC = () => {
         >
           <Shield className="w-5 h-5" />
         </motion.button>
+        </div>
       </div>
 
       <div className="max-w-[480px] mx-auto p-4 space-y-4">
