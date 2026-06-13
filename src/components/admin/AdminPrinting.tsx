@@ -1,10 +1,9 @@
 import React, { useState } from "react";
 import { tiposFormulario } from "@/data/churches";
 import { useEnvios, useIgrejas } from "@/lib/storage";
-import { Download, Printer, FileText, Search, Archive, CheckSquare, Square, FileStack } from "lucide-react";
+import { Download, Printer, FileText, Search, Archive, CheckSquare, Square } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { mergeFilesFromUrls } from "@/lib/pdf";
 
 const meses = [
   { value: "01", label: "Janeiro" },
@@ -31,7 +30,6 @@ const AdminPrinting: React.FC = () => {
   const [tipoFiltro, setTipoFiltro] = useState("");
   const { data: igrejas = [] } = useIgrejas();
   const [isZipping, setIsZipping] = useState(false);
-  const [isMerging, setIsMerging] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: envios = [] } = useEnvios();
@@ -92,22 +90,6 @@ const AdminPrinting: React.FC = () => {
       console.error("Erro ao gerar zip:", err);
     } finally {
       setIsZipping(false);
-    }
-  };
-
-  const handleDownloadMergedPdf = async () => {
-    const target = selectedEnvios.length > 0 ? selectedEnvios : filtered;
-    if (target.length === 0) return;
-    setIsMerging(true);
-    try {
-      const blob = await mergeFilesFromUrls(
-        target.map((e) => ({ url: e.arquivo_url, nome: e.arquivo_nome }))
-      );
-      saveAs(blob, `Documentos_${mesFiltro}.pdf`);
-    } catch (err) {
-      console.error("Erro ao mesclar PDFs:", err);
-    } finally {
-      setIsMerging(false);
     }
   };
 
@@ -225,15 +207,7 @@ const AdminPrinting: React.FC = () => {
             </h3>
           </div>
           {filtered.length > 0 && (
-            <div className="flex items-center gap-3 flex-wrap">
-              <button
-                onClick={handleDownloadMergedPdf}
-                disabled={isMerging}
-                className="text-sm font-semibold text-primary flex items-center gap-1 hover:brightness-110 disabled:opacity-50"
-              >
-                <FileStack className="w-4 h-4" />
-                {isMerging ? "Gerando..." : "Baixar PDF único"}
-              </button>
+            <div className="flex items-center gap-3">
               <button
                 onClick={handleDownloadZip}
                 disabled={isZipping}
