@@ -5,43 +5,26 @@ import { useAuth } from "@/context/AuthContext";
 import { LogIn, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [mode, setMode] = useState<"login" | "signup">("login");
   const [loading, setLoading] = useState(false);
-  const { login, signUp } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       setError("Preencha todos os campos.");
       return;
     }
     setLoading(true);
-    if (mode === "signup") {
-      const res = await signUp(email.trim(), password);
-      setLoading(false);
-      if (!res.ok) {
-        setError(res.error || "Não foi possível criar a conta.");
-        return;
-      }
-      // After signup, log in automatically
-      const loginRes = await login(email.trim(), password);
-      if (loginRes.ok) navigate("/admin");
-      else setError("Conta criada. Faça login para continuar.");
-      return;
-    }
-    const res = await login(email.trim(), password);
+    const res = await login(username.trim(), password);
     setLoading(false);
-    if (res.ok) {
-      navigate("/admin");
-    } else {
-      setError("Credenciais inválidas.");
-    }
+    if (res.ok) navigate("/admin");
+    else setError(res.error || "Credenciais inválidas.");
   };
 
   return (
@@ -67,7 +50,7 @@ const Login: React.FC = () => {
             <span className="text-primary-foreground font-bold text-2xl">CCB</span>
           </div>
           <h1 className="text-2xl font-bold text-primary tracking-tight">
-            {mode === "signup" ? "Criar Conta Admin" : "Acesso Administrativo"}
+            Acesso Administrativo
           </h1>
           <p className="text-muted-foreground mt-2 text-base">
             Patrimônio CCB Digital · v1.4
@@ -77,13 +60,13 @@ const Login: React.FC = () => {
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-foreground mb-2">E-mail</label>
+            <label className="block text-sm font-semibold text-foreground mb-2">Usuário</label>
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seuemail@exemplo.com"
-              autoComplete="email"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Admin"
+              autoComplete="username"
               className="w-full touch-target px-4 rounded-xl bg-secondary border-0 border-b-2 border-transparent focus:border-primary focus:outline-none text-base transition-colors"
             />
           </div>
@@ -95,8 +78,8 @@ const Login: React.FC = () => {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder={mode === "signup" ? "Mínimo 6 caracteres" : "Digite sua senha"}
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                placeholder="Digite sua senha"
+                autoComplete="current-password"
                 className="w-full touch-target px-4 pr-12 rounded-xl bg-secondary border-0 border-b-2 border-transparent focus:border-primary focus:outline-none text-base transition-colors"
               />
               <button
@@ -122,18 +105,8 @@ const Login: React.FC = () => {
             className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-lg flex items-center justify-center gap-2 mt-6 transition-all hover:brightness-110 disabled:opacity-60"
           >
             <LogIn className="w-5 h-5" />
-            {loading ? "AGUARDE..." : mode === "signup" ? "CRIAR CONTA" : "ENTRAR"}
+            {loading ? "AGUARDE..." : "ENTRAR"}
           </motion.button>
-
-          <button
-            type="button"
-            onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); }}
-            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"
-          >
-            {mode === "login"
-              ? "Primeiro acesso? Criar conta de administrador"
-              : "Já tem conta? Fazer login"}
-          </button>
         </form>
       </motion.div>
     </div>
