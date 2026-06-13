@@ -139,15 +139,17 @@ const UserArea: React.FC = () => {
 
     try {
       setIsUploading(true);
+      const { imageFileToPdf } = await import("@/lib/pdf");
+      const arquivoFinal = await imageFileToPdf(arquivo);
       const envio = await addEnvio.mutateAsync({
         igreja_id: igreja.id,
         igreja_nome: igreja.nome,
         tipo_formulario: tipoFormulario,
         nome_responsavel: nomeResponsavel.trim(),
-        arquivo_nome: arquivo.name,
+        arquivo_nome: arquivoFinal.name,
         arquivo_url: '',
         mes_referencia: mesReferencia,
-        file: arquivo,
+        file: arquivoFinal,
       });
 
       setProtocolo(envio.protocolo);
