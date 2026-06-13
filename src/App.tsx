@@ -11,7 +11,8 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, role } = useAuth();
+  const { isAuthenticated, role, loading } = useAuth();
+  if (loading) return null;
   if (!isAuthenticated || role !== "admin") return <Navigate to="/admin/login" replace />;
   return <>{children}</>;
 };
