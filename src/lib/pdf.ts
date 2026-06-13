@@ -90,5 +90,5 @@ export async function mergeFilesFromUrls(
   }
 
   const out = await merged.save();
-  return new Blob([out], { type: "application/pdf" });
+  return new Blob([out.buffer as ArrayBuffer], { type: "application/pdf" });
 }
