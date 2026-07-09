@@ -172,6 +172,8 @@ const UserArea: React.FC = () => {
     setMesReferencia(defaultMonth);
     setArquivo(null);
     setProtocolo(null);
+    setEnvioInfo(null);
+    setCopiado(false);
     setError("");
     setIsScanning(false);
     setScanComplete(false);
