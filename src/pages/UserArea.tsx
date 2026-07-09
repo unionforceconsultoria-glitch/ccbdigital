@@ -90,6 +90,8 @@ const UserArea: React.FC = () => {
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [envioInfo, setEnvioInfo] = useState<{ igreja: string; mes: string } | null>(null);
+  const [copiado, setCopiado] = useState(false);
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
