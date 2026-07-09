@@ -156,6 +156,7 @@ const UserArea: React.FC = () => {
       });
 
       setProtocolo(envio.protocolo);
+      setEnvioInfo({ igreja: igreja.nome, mes: mesReferencia });
     } catch (err) {
       console.error(err);
       setError("Erro ao enviar documento. Tente novamente.");
