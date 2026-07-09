@@ -287,10 +287,36 @@ const UserArea: React.FC = () => {
 
               <ProtocolStamp protocolo={protocolo} />
 
+              {envioInfo && (
+                <div className="mt-4 text-sm text-muted-foreground space-y-1">
+                  <p><span className="font-semibold text-foreground">Igreja:</span> {envioInfo.igreja}</p>
+                  <p><span className="font-semibold text-foreground">Mês de referência:</span> {formatarMes(envioInfo.mes)}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 mt-6">
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={compartilharProtocolo}
+                  className="touch-target bg-primary text-primary-foreground font-bold rounded-xl text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all"
+                >
+                  <Share2 className="w-4 h-4" />
+                  COMPARTILHAR
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={copiarProtocolo}
+                  className="touch-target bg-secondary text-foreground font-bold rounded-xl text-sm flex items-center justify-center gap-2 border border-border hover:brightness-95 transition-all"
+                >
+                  {copiado ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  {copiado ? "COPIADO" : "COPIAR"}
+                </motion.button>
+              </div>
+
               <motion.button
                 whileTap={{ scale: 0.96 }}
                 onClick={resetForm}
-                className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-base mt-6 transition-all hover:brightness-110"
+                className="w-full touch-target bg-foreground text-background font-bold rounded-xl text-base mt-3 transition-all hover:brightness-110"
               >
                 ENVIAR OUTRO DOCUMENTO
               </motion.button>
