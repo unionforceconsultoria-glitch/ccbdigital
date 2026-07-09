@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Check, X, RotateCcw, Loader2 } from "lucide-react";
+import jsPDF from "jspdf";
 
 type Point = { x: number; y: number };
 
@@ -225,10 +226,30 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
       }
 
       octx.putImageData(outImg, 0, 0);
-      const blob: Blob = await new Promise((resolve) =>
-        outCanvas.toBlob((b) => resolve(b!), "image/jpeg", 0.82)
-      );
-      const file = new File([blob], `scan-${Date.now()}.jpg`, { type: "image/jpeg" });
+      const jpegDataUrl = outCanvas.toDataURL("image/jpeg", 0.82);
+
+      // Gera PDF A4 mantendo a proporção do documento escaneado
+      const pdf = new jsPDF({ orientation: outH >= outW ? "p" : "l", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgRatio = outW / outH;
+      const pageRatio = pageW / pageH;
+      let drawW: number;
+      let drawH: number;
+      if (imgRatio > pageRatio) {
+        drawW = pageW;
+        drawH = pageW / imgRatio;
+      } else {
+        drawH = pageH;
+        drawW = pageH * imgRatio;
+      }
+      const offX = (pageW - drawW) / 2;
+      const offY = (pageH - drawH) / 2;
+      pdf.addImage(jpegDataUrl, "JPEG", offX, offY, drawW, drawH, undefined, "FAST");
+      const pdfBlob = pdf.output("blob");
+      const file = new File([pdfBlob], `documento-escaneado-${Date.now()}.pdf`, {
+        type: "application/pdf",
+      });
       onDone(file);
     } finally {
       setProcessing(false);
