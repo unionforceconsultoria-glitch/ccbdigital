@@ -177,6 +177,18 @@ const UserArea: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <TutorialModal forceOpen={showTutorial} onClose={() => setShowTutorial(false)} />
+      {showScanner && (
+        <DocumentScanner
+          onCancel={() => setShowScanner(false)}
+          onDone={(file) => {
+            setShowScanner(false);
+            setArquivo(file);
+            setScanComplete(true);
+            setIsScanning(false);
+            setError("");
+          }}
+        />
+      )}
       {/* Header */}
       <div className="bg-primary px-4 py-4 flex items-center justify-between">
         <div>
