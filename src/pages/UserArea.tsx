@@ -105,6 +105,45 @@ const UserArea: React.FC = () => {
   const { data: igrejas = [] } = useIgrejas();
   const addEnvio = useAddEnvio();
 
+  const formatarMes = (mes: string) => {
+    const [ano, m] = mes.split("-");
+    const nome = meses.find((x) => x.value === m)?.label || m;
+    return `${nome}/${ano}`;
+  };
+
+  const gerarTextoCompartilhamento = () => {
+    if (!protocolo || !envioInfo) return "";
+    return `📄 Protocolo de Envio - Patrimônio CCB Digital\n\nIgreja: ${envioInfo.igreja}\nMês de referência: ${formatarMes(envioInfo.mes)}\nProtocolo: ${protocolo}`;
+  };
+
+  const compartilharProtocolo = async () => {
+    const texto = gerarTextoCompartilhamento();
+    if (!texto) return;
+    try {
+      if (typeof navigator !== "undefined" && (navigator as any).share) {
+        await (navigator as any).share({ title: "Protocolo de Envio", text: texto });
+      } else {
+        await navigator.clipboard.writeText(texto);
+        setCopiado(true);
+        setTimeout(() => setCopiado(false), 2000);
+      }
+    } catch {
+      /* cancelado */
+    }
+  };
+
+  const copiarProtocolo = async () => {
+    const texto = gerarTextoCompartilhamento();
+    if (!texto) return;
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
     const file = e.target.files[0];
