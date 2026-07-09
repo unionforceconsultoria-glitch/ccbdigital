@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
-import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check, HelpCircle } from "lucide-react";
+import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check, HelpCircle, Share2, Copy } from "lucide-react";
 import { ScanLine } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 import TutorialModal from "@/components/TutorialModal";
@@ -90,6 +90,8 @@ const UserArea: React.FC = () => {
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [protocolo, setProtocolo] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [envioInfo, setEnvioInfo] = useState<{ igreja: string; mes: string } | null>(null);
+  const [copiado, setCopiado] = useState(false);
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
@@ -102,6 +104,45 @@ const UserArea: React.FC = () => {
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
   const { data: igrejas = [] } = useIgrejas();
   const addEnvio = useAddEnvio();
+
+  const formatarMes = (mes: string) => {
+    const [ano, m] = mes.split("-");
+    const nome = meses.find((x) => x.value === m)?.label || m;
+    return `${nome}/${ano}`;
+  };
+
+  const gerarTextoCompartilhamento = () => {
+    if (!protocolo || !envioInfo) return "";
+    return `📄 Protocolo de Envio - Patrimônio CCB Digital\n\nIgreja: ${envioInfo.igreja}\nMês de referência: ${formatarMes(envioInfo.mes)}\nProtocolo: ${protocolo}`;
+  };
+
+  const compartilharProtocolo = async () => {
+    const texto = gerarTextoCompartilhamento();
+    if (!texto) return;
+    try {
+      if (typeof navigator !== "undefined" && (navigator as any).share) {
+        await (navigator as any).share({ title: "Protocolo de Envio", text: texto });
+      } else {
+        await navigator.clipboard.writeText(texto);
+        setCopiado(true);
+        setTimeout(() => setCopiado(false), 2000);
+      }
+    } catch {
+      /* cancelado */
+    }
+  };
+
+  const copiarProtocolo = async () => {
+    const texto = gerarTextoCompartilhamento();
+    if (!texto) return;
+    try {
+      await navigator.clipboard.writeText(texto);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
@@ -154,6 +195,7 @@ const UserArea: React.FC = () => {
       });
 
       setProtocolo(envio.protocolo);
+      setEnvioInfo({ igreja: igreja.nome, mes: mesReferencia });
     } catch (err) {
       console.error(err);
       setError("Erro ao enviar documento. Tente novamente.");
@@ -169,6 +211,8 @@ const UserArea: React.FC = () => {
     setMesReferencia(defaultMonth);
     setArquivo(null);
     setProtocolo(null);
+    setEnvioInfo(null);
+    setCopiado(false);
     setError("");
     setIsScanning(false);
     setScanComplete(false);
@@ -243,10 +287,36 @@ const UserArea: React.FC = () => {
 
               <ProtocolStamp protocolo={protocolo} />
 
+              {envioInfo && (
+                <div className="mt-4 text-sm text-muted-foreground space-y-1">
+                  <p><span className="font-semibold text-foreground">Igreja:</span> {envioInfo.igreja}</p>
+                  <p><span className="font-semibold text-foreground">Mês de referência:</span> {formatarMes(envioInfo.mes)}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 mt-6">
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={compartilharProtocolo}
+                  className="touch-target bg-primary text-primary-foreground font-bold rounded-xl text-sm flex items-center justify-center gap-2 hover:brightness-110 transition-all"
+                >
+                  <Share2 className="w-4 h-4" />
+                  COMPARTILHAR
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.96 }}
+                  onClick={copiarProtocolo}
+                  className="touch-target bg-secondary text-foreground font-bold rounded-xl text-sm flex items-center justify-center gap-2 border border-border hover:brightness-95 transition-all"
+                >
+                  {copiado ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  {copiado ? "COPIADO" : "COPIAR"}
+                </motion.button>
+              </div>
+
               <motion.button
                 whileTap={{ scale: 0.96 }}
                 onClick={resetForm}
-                className="w-full touch-target bg-primary text-primary-foreground font-bold rounded-xl text-base mt-6 transition-all hover:brightness-110"
+                className="w-full touch-target bg-foreground text-background font-bold rounded-xl text-base mt-3 transition-all hover:brightness-110"
               >
                 ENVIAR OUTRO DOCUMENTO
               </motion.button>
