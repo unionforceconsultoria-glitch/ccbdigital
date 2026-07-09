@@ -4,8 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
 import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check, HelpCircle } from "lucide-react";
+import { ScanLine } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 import TutorialModal from "@/components/TutorialModal";
+import DocumentScanner from "@/components/DocumentScanner";
 
 // Função para comprimir fotos tiradas de celular antes de enviar
 const compressImage = async (file: File): Promise<File> => {
@@ -93,6 +95,7 @@ const UserArea: React.FC = () => {
   const [scanComplete, setScanComplete] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -326,7 +329,7 @@ const UserArea: React.FC = () => {
                 <label className="block text-sm font-semibold text-foreground mb-2">
                   Arquivo (PDF ou Imagem)
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <motion.button
                     type="button"
                     whileTap={{ scale: 0.96 }}
@@ -335,10 +338,23 @@ const UserArea: React.FC = () => {
                       setError("");
                       cameraRef.current?.click();
                     }}
-                    className="touch-target bg-primary text-primary-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-110 transition-all"
+                    className="touch-target bg-primary text-primary-foreground rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold hover:brightness-110 transition-all px-1"
                   >
                     <Camera className="w-5 h-5" />
-                    Tirar foto
+                    Foto
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    whileTap={{ scale: 0.96 }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setError("");
+                      setShowScanner(true);
+                    }}
+                    className="touch-target bg-foreground text-background rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold hover:brightness-110 transition-all px-1"
+                  >
+                    <ScanLine className="w-5 h-5" />
+                    Escanear
                   </motion.button>
                   <motion.button
                     type="button"
@@ -348,7 +364,7 @@ const UserArea: React.FC = () => {
                       setError("");
                       galleryRef.current?.click();
                     }}
-                    className="touch-target bg-secondary text-foreground rounded-xl flex items-center justify-center gap-2 text-sm font-bold hover:brightness-95 transition-all border border-border"
+                    className="touch-target bg-secondary text-foreground rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold hover:brightness-95 transition-all border border-border px-1"
                   >
                     <Upload className="w-5 h-5" />
                     Arquivo
