@@ -237,9 +237,14 @@ const UserArea: React.FC = () => {
 
       setProtocolo(envio.protocolo);
       setEnvioInfo({ igreja: igreja.nome, mes: mesReferencia });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Erro ao enviar documento. Tente novamente.");
+      const msg = err?.message || err?.error_description || "";
+      setError(
+        msg
+          ? `Erro ao enviar documento: ${msg}`
+          : "Erro ao enviar documento. Verifique sua conexão e tente novamente."
+      );
     } finally {
       setIsUploading(false);
     }
