@@ -9,57 +9,98 @@ import ProtocolStamp from "@/components/ProtocolStamp";
 import TutorialModal from "@/components/TutorialModal";
 import DocumentScanner from "@/components/DocumentScanner";
 
-// Função para comprimir fotos tiradas de celular antes de enviar
-const compressImage = async (file: File): Promise<File> => {
-  if (!file.type.startsWith('image/')) return file;
-  
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1200;
-        const MAX_HEIGHT = 1200;
-        let width = img.width;
-        let height = img.height;
+// Garante um nome de arquivo válido em qualquer plataforma (iOS às vezes envia "image.heic" ou sem nome)
+const nomeJpeg = (original: string) => {
+  const base = (original || "foto").replace(/\.[^.]+$/, "").replace(/[^\w\-. ]+/g, "_").trim();
+  return `${base || "foto"}.jpg`;
+};
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        
-        canvas.toBlob((blob) => {
-          if (blob) {
-             const newFile = new File([blob], file.name, {
-               type: 'image/jpeg',
-               lastModified: Date.now(),
-             });
-             resolve(newFile);
-          } else {
-             resolve(file);
-          }
-        }, 'image/jpeg', 0.7); // 70% quality
+// Decodifica imagem de forma compatível (iPhone/HEIC, Android, desktop)
+const decodeImage = async (
+  file: File
+): Promise<{ width: number; height: number; draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void; cleanup: () => void }> => {
+  // createImageBitmap é o caminho mais confiável no iOS 15+ e Android
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bmp = await createImageBitmap(file);
+      return {
+        width: bmp.width,
+        height: bmp.height,
+        draw: (ctx, w, h) => ctx.drawImage(bmp, 0, 0, w, h),
+        cleanup: () => bmp.close?.(),
       };
-      if (typeof event.target?.result === 'string') {
-        img.src = event.target.result;
-      }
+    } catch {
+      /* segue para o fallback */
+    }
+  }
+
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new window.Image();
+      const timer = setTimeout(() => reject(new Error("timeout")), 20000);
+      el.onload = () => { clearTimeout(timer); resolve(el); };
+      el.onerror = () => { clearTimeout(timer); reject(new Error("decode")); };
+      el.src = url;
+    });
+    return {
+      width: img.naturalWidth || img.width,
+      height: img.naturalHeight || img.height,
+      draw: (ctx, w, h) => ctx.drawImage(img, 0, 0, w, h),
+      cleanup: () => URL.revokeObjectURL(url),
     };
-    reader.onerror = () => resolve(file); // se falhar, retorna original
-    reader.readAsDataURL(file);
-  });
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw e;
+  }
+};
+
+// Função para comprimir fotos tiradas de celular antes de enviar.
+// Em caso de qualquer falha (ex.: formato não suportado), retorna o arquivo original.
+const compressImage = async (file: File): Promise<File> => {
+  if (!file.type.startsWith("image/")) return file;
+
+  let decoded: Awaited<ReturnType<typeof decodeImage>> | null = null;
+  try {
+    decoded = await decodeImage(file);
+    const MAX = 1600;
+    let width = decoded.width;
+    let height = decoded.height;
+    if (!width || !height) return file;
+    if (width > height) {
+      if (width > MAX) { height = Math.round((height * MAX) / width); width = MAX; }
+    } else {
+      if (height > MAX) { width = Math.round((width * MAX) / height); height = MAX; }
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    decoded.draw(ctx, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      if (canvas.toBlob) {
+        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.75);
+      } else {
+        resolve(null);
+      }
+    });
+    if (!blob || blob.size === 0) return file;
+
+    return new File([blob], nomeJpeg(file.name), {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } catch (err) {
+    console.warn("Falha ao comprimir imagem, enviando original", err);
+    return file;
+  } finally {
+    decoded?.cleanup();
+  }
 };
 
 const meses = [
