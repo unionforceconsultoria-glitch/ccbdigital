@@ -53,14 +53,39 @@ export function getMesAnterior(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+const MIME_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/heic': 'heic',
+  'image/heif': 'heif',
+  'image/webp': 'webp',
+  'application/pdf': 'pdf',
+};
+
+function safeId(): string {
+  // crypto.randomUUID não existe em Safari/iOS antigos
+  const c = (globalThis as any).crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 async function uploadFile(file: File, folder: string): Promise<string> {
-  const ext = file.name.split('.').pop();
-  const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
-  
+  const rawExt = (file.name.split('.').pop() || '').toLowerCase();
+  const ext =
+    (/^[a-z0-9]{2,5}$/.test(rawExt) ? rawExt : '') ||
+    MIME_EXT[file.type] ||
+    'bin';
+  const fileName = `${folder}/${safeId()}.${ext}`;
+
   const { error } = await supabase.storage
     .from('documentos')
-    .upload(fileName, file);
-  
+    .upload(fileName, file, {
+      contentType: file.type || 'application/octet-stream',
+      cacheControl: '3600',
+      upsert: false,
+    });
+
   if (error) throw error;
   
   const { data } = supabase.storage
