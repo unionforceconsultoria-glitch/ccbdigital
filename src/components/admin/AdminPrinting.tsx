@@ -1,9 +1,26 @@
 import React, { useState } from "react";
 import { tiposFormulario } from "@/data/churches";
 import { useEnvios, useIgrejas } from "@/lib/storage";
-import { Download, Printer, FileText, Search, Archive, CheckSquare, Square } from "lucide-react";
+import {
+  Download,
+  Printer,
+  FileText,
+  Search,
+  Archive,
+  CheckSquare,
+  Square,
+  Loader2,
+  FileCheck,
+  Sparkles,
+} from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { toast } from "sonner";
+import {
+  printUnifiedA4,
+  downloadUnifiedA4,
+  EnvioDocumento,
+} from "@/lib/pdfPrintService";
 
 const meses = [
   { value: "01", label: "Janeiro" },
@@ -23,13 +40,17 @@ const meses = [
 const AdminPrinting: React.FC = () => {
   const defaultDate = new Date();
   defaultDate.setMonth(defaultDate.getMonth() - 1);
-  const defaultMonth = `${defaultDate.getFullYear()}-${String(defaultDate.getMonth() + 1).padStart(2, "0")}`;
+  const defaultMonth = `${defaultDate.getFullYear()}-${String(
+    defaultDate.getMonth() + 1
+  ).padStart(2, "0")}`;
 
   const [mesFiltro, setMesFiltro] = useState(defaultMonth);
   const [igrejaFiltro, setIgrejaFiltro] = useState("");
   const [tipoFiltro, setTipoFiltro] = useState("");
   const { data: igrejas = [] } = useIgrejas();
   const [isZipping, setIsZipping] = useState(false);
+  const [isProcessingPdf, setIsProcessingPdf] = useState(false);
+  const [pdfProgressMsg, setPdfProgressMsg] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const { data: envios = [] } = useEnvios();
@@ -42,12 +63,14 @@ const AdminPrinting: React.FC = () => {
     return true;
   });
 
-  const allSelected = filtered.length > 0 && filtered.every((e) => selectedIds.has(e.id));
+  const allSelected =
+    filtered.length > 0 && filtered.every((e) => selectedIds.has(e.id));
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   };
@@ -61,10 +84,90 @@ const AdminPrinting: React.FC = () => {
   };
 
   const selectedEnvios = filtered.filter((e) => selectedIds.has(e.id));
+  const targetEnvios = selectedEnvios.length > 0 ? selectedEnvios : filtered;
 
+  // Converte envios para o formato esperado pelo serviço
+  const mapToDocumentos = (lista: typeof filtered): EnvioDocumento[] => {
+    return lista.map((e) => ({
+      id: e.id,
+      arquivo_nome: e.arquivo_nome,
+      arquivo_url: e.arquivo_url,
+      igreja_nome: e.igreja_nome,
+      tipo_formulario: e.tipo_formulario,
+      protocolo: e.protocolo,
+      mes_referencia: e.mes_referencia,
+    }));
+  };
+
+  // Imprime em formato A4 padronizado (mesclando PDFs e fotos digitalizadas)
+  const handlePrintA4Unified = async () => {
+    if (targetEnvios.length === 0) return;
+    setIsProcessingPdf(true);
+    setPdfProgressMsg("Iniciando digitalização e montagem do PDF A4...");
+
+    try {
+      const documentos = mapToDocumentos(targetEnvios);
+      await printUnifiedA4(documentos, (_curr, _tot, msg) => {
+        setPdfProgressMsg(msg);
+      });
+      toast.success(
+        `${documentos.length} documento(s) padronizado(s) em A4 com sucesso!`
+      );
+    } catch (err: any) {
+      console.error("Erro ao gerar PDF para impressão:", err);
+      toast.error(
+        "Erro ao processar documentos para impressão: " +
+          (err.message || "Tente novamente")
+      );
+    } finally {
+      setIsProcessingPdf(false);
+      setPdfProgressMsg("");
+    }
+  };
+
+  // Baixa o arquivo PDF A4 único consolidado para arquivo/guarda
+  const handleDownloadA4Unified = async () => {
+    if (targetEnvios.length === 0) return;
+    setIsProcessingPdf(true);
+    setPdfProgressMsg("Processando páginas em A4 de alta definição...");
+
+    try {
+      const documentos = mapToDocumentos(targetEnvios);
+      const nomeArquivo = `Documentos_CCB_Digital_${mesFiltro}_A4.pdf`;
+      await downloadUnifiedA4(documentos, nomeArquivo, (_curr, _tot, msg) => {
+        setPdfProgressMsg(msg);
+      });
+      toast.success(`PDF A4 baixado com sucesso: ${nomeArquivo}`);
+    } catch (err: any) {
+      console.error("Erro ao baixar PDF A4 unificado:", err);
+      toast.error("Erro ao gerar PDF: " + (err.message || "Tente novamente"));
+    } finally {
+      setIsProcessingPdf(false);
+      setPdfProgressMsg("");
+    }
+  };
+
+  // Imprime um documento individual em A4
+  const handlePrintSingle = async (envio: (typeof filtered)[0]) => {
+    setIsProcessingPdf(true);
+    setPdfProgressMsg(`Digitalizando ${envio.igreja_nome} em A4...`);
+
+    try {
+      const documentos = mapToDocumentos([envio]);
+      await printUnifiedA4(documentos);
+      toast.success("Documento pronto para impressão A4!");
+    } catch (err: any) {
+      console.error("Erro ao imprimir documento:", err);
+      toast.error("Falha ao abrir impressão: " + (err.message || ""));
+    } finally {
+      setIsProcessingPdf(false);
+      setPdfProgressMsg("");
+    }
+  };
+
+  // Mantém a opção original de baixar o arquivo ZIP bruto
   const handleDownloadZip = async () => {
-    const target = selectedEnvios.length > 0 ? selectedEnvios : filtered;
-    if (target.length === 0) return;
+    if (targetEnvios.length === 0) return;
     setIsZipping(true);
 
     try {
@@ -73,7 +176,7 @@ const AdminPrinting: React.FC = () => {
       const rootFolder = zip.folder(folderName);
       if (!rootFolder) return;
 
-      for (const envio of target) {
+      for (const envio of targetEnvios) {
         try {
           const response = await fetch(envio.arquivo_url);
           const blob = await response.blob();
@@ -86,76 +189,40 @@ const AdminPrinting: React.FC = () => {
 
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, `${folderName}.zip`);
+      toast.success("Arquivo ZIP gerado com sucesso!");
     } catch (err) {
       console.error("Erro ao gerar zip:", err);
+      toast.error("Erro ao criar pacote ZIP.");
     } finally {
       setIsZipping(false);
     }
   };
 
-  const handlePrintSelected = async () => {
-    const target = selectedEnvios.length > 0 ? selectedEnvios : filtered;
-    if (target.length === 0) return;
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    printWindow.document.write(`<html><head><title>Imprimir Documentos</title><style>
-      @page { size: A4; margin: 0; }
-      html, body { margin: 0; padding: 0; width: 210mm; height: 297mm; }
-      * { box-sizing: border-box; }
-      .page {
-        width: 210mm;
-        height: 297mm;
-        page-break-after: always;
-        page-break-inside: avoid;
-        break-after: page;
-        break-inside: avoid;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
-        padding: 5mm;
-      }
-      .page:last-child { page-break-after: auto; break-after: auto; }
-      .page img {
-        max-width: 100%;
-        max-height: 100%;
-        width: auto;
-        height: auto;
-        object-fit: contain;
-        display: block;
-      }
-      .page iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-      }
-    </style></head><body>`);
-
-    for (const envio of target) {
-      const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(envio.arquivo_nome);
-      if (isImage) {
-        printWindow.document.write(`<div class="page"><img src="${envio.arquivo_url}" alt="${envio.arquivo_nome}" /></div>`);
-      } else {
-        printWindow.document.write(`<div class="page"><iframe src="${envio.arquivo_url}"></iframe></div>`);
-      }
-    }
-
-    printWindow.document.write(`</body></html>`);
-    printWindow.document.close();
-    printWindow.onload = () => {
-      setTimeout(() => printWindow.print(), 500);
-    };
-  };
-
   return (
     <div className="space-y-4">
-      {/* Filters */}
+      {/* Banner Informativo de Digitalização A4 */}
+      <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-bold text-sm text-primary">
+              Impressão Padronizada A4 (Estilo Scanner)
+            </h4>
+            <p className="text-xs text-muted-foreground">
+              Fotos e PDFs são convertidos automaticamente para páginas A4
+              nítidas, com fundo limpo e sem cortes nas bordas.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros */}
       <div className="bg-background rounded-2xl card-shadow p-4 space-y-3">
         <h3 className="font-bold text-primary flex items-center gap-2">
           <Search className="w-5 h-5" />
-          Filtros
+          Filtros de Documentos
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <input
@@ -171,7 +238,9 @@ const AdminPrinting: React.FC = () => {
           >
             <option value="">Todas as igrejas</option>
             {igrejas.map((i) => (
-              <option key={i.id} value={i.id}>{i.nome}</option>
+              <option key={i.id} value={i.id}>
+                {i.nome}
+              </option>
             ))}
           </select>
           <select
@@ -181,47 +250,91 @@ const AdminPrinting: React.FC = () => {
           >
             <option value="">Todos os formulários</option>
             {tiposFormulario.map((t) => (
-              <option key={t} value={t}>{t}</option>
+              <option key={t} value={t}>
+                {t}
+              </option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Results */}
+      {/* Barra de Progresso quando está gerando o PDF */}
+      {isProcessingPdf && (
+        <div className="bg-primary text-primary-foreground rounded-2xl p-4 flex items-center gap-3 shadow-lg animate-pulse">
+          <Loader2 className="w-6 h-6 animate-spin shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm">Gerando PDF A4 Unificado...</p>
+            <p className="text-xs opacity-90 truncate">{pdfProgressMsg}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Resultados e Ações */}
       <div className="bg-background rounded-2xl card-shadow p-4">
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div className="flex items-center gap-3">
             {filtered.length > 0 && (
               <button
                 onClick={toggleSelectAll}
-                className="text-sm font-semibold text-primary flex items-center gap-1"
+                disabled={isProcessingPdf}
+                className="text-sm font-semibold text-primary flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               >
-                {allSelected ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
-                {allSelected ? "Desmarcar" : "Selecionar todos"}
+                {allSelected ? (
+                  <CheckSquare className="w-5 h-5 text-primary" />
+                ) : (
+                  <Square className="w-5 h-5 text-muted-foreground" />
+                )}
+                {allSelected ? "Desmarcar tudo" : "Selecionar tudo"}
               </button>
             )}
-            <h3 className="font-bold text-primary text-sm">
+            <h3 className="font-bold text-foreground text-sm">
               {selectedEnvios.length > 0
-                ? `${selectedEnvios.length} selecionado${selectedEnvios.length !== 1 ? "s" : ""}`
-                : `${filtered.length} documento${filtered.length !== 1 ? "s" : ""}`}
+                ? `${selectedEnvios.length} selecionado${
+                    selectedEnvios.length !== 1 ? "s" : ""
+                  }`
+                : `${filtered.length} documento${
+                    filtered.length !== 1 ? "s" : ""
+                  }`}
             </h3>
           </div>
+
           {filtered.length > 0 && (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Botão Principal: Imprimir PDF A4 Unificado */}
+              <button
+                onClick={handlePrintA4Unified}
+                disabled={isProcessingPdf || isZipping}
+                title="Abre todos os documentos padronizados em folha A4 oficial para imprimir"
+                className="bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-sm disabled:opacity-50"
+              >
+                {isProcessingPdf ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Printer className="w-4 h-4" />
+                )}
+                Imprimir PDF A4
+              </button>
+
+              {/* Botão Secundário: Baixar PDF A4 Unificado */}
+              <button
+                onClick={handleDownloadA4Unified}
+                disabled={isProcessingPdf || isZipping}
+                title="Baixa um arquivo PDF único com todas as páginas em A4 para arquivar"
+                className="bg-secondary text-foreground hover:bg-muted border border-border px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
+              >
+                <FileCheck className="w-4 h-4 text-primary" />
+                Baixar PDF A4
+              </button>
+
+              {/* Botão Terciário: Baixar ZIP */}
               <button
                 onClick={handleDownloadZip}
-                disabled={isZipping}
-                className="text-sm font-semibold text-primary flex items-center gap-1 hover:brightness-110 disabled:opacity-50"
+                disabled={isZipping || isProcessingPdf}
+                title="Baixa os arquivos originais em uma pasta ZIP"
+                className="bg-secondary text-muted-foreground hover:text-foreground px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-50"
               >
                 <Archive className="w-4 h-4" />
-                {isZipping ? "Gerando..." : "Baixar ZIP"}
-              </button>
-              <button
-                onClick={handlePrintSelected}
-                className="text-sm font-semibold text-primary flex items-center gap-1 hover:brightness-110"
-              >
-                <Printer className="w-4 h-4" />
-                Imprimir
+                {isZipping ? "Gerando..." : "ZIP"}
               </button>
             </div>
           )}
@@ -235,34 +348,74 @@ const AdminPrinting: React.FC = () => {
           <div className="space-y-2">
             {filtered.map((envio) => {
               const isSelected = selectedIds.has(envio.id);
+              const isImage = /\.(jpg|jpeg|png|webp|bmp|gif)$/i.test(
+                envio.arquivo_nome
+              );
+
               return (
                 <div
                   key={envio.id}
                   onClick={() => toggleSelect(envio.id)}
                   className={`flex items-center gap-3 rounded-xl px-4 py-3 cursor-pointer transition-colors ${
-                    isSelected ? "bg-primary/10 ring-1 ring-primary/30" : "bg-secondary"
+                    isSelected
+                      ? "bg-primary/10 ring-1 ring-primary/30"
+                      : "bg-secondary hover:bg-secondary/80"
                   }`}
                 >
-                  <button className="shrink-0 text-primary">
-                    {isSelected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                  <button className="shrink-0 text-primary" tabIndex={-1}>
+                    {isSelected ? (
+                      <CheckSquare className="w-5 h-5 text-primary" />
+                    ) : (
+                      <Square className="w-5 h-5 text-muted-foreground" />
+                    )}
                   </button>
+
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <FileText className="w-4 h-4 text-primary shrink-0" />
-                      <span className="text-sm font-semibold truncate">{envio.igreja_nome}</span>
+                      <span className="text-sm font-semibold truncate text-foreground">
+                        {envio.igreja_nome}
+                      </span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0 ${
+                          isImage
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                        }`}
+                      >
+                        {isImage ? "Foto / Digitalizado" : "PDF"}
+                      </span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {envio.tipo_formulario} · {envio.protocolo}
+                      {envio.tipo_formulario} · Protocolo:{" "}
+                      <span className="font-mono">{envio.protocolo}</span>
                     </p>
                   </div>
-                  <a
-                    href={envio.arquivo_url}
-                    download={envio.arquivo_nome}
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-primary hover:text-primary/80 shrink-0"
-                  >
-                    <Download className="w-5 h-5" />
-                  </a>
+
+                  {/* Ações por linha */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePrintSingle(envio);
+                      }}
+                      title="Imprimir este documento em A4"
+                      className="p-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    >
+                      <Printer className="w-4 h-4" />
+                    </button>
+
+                    <a
+                      href={envio.arquivo_url}
+                      download={envio.arquivo_nome}
+                      onClick={(e) => e.stopPropagation()}
+                      title="Baixar arquivo original"
+                      className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                    </a>
+                  </div>
                 </div>
               );
             })}
