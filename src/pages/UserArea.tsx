@@ -142,6 +142,7 @@ const UserArea: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
   const { data: documentosAdmin = [] } = useDocumentosAdmin();
@@ -193,20 +194,38 @@ const UserArea: React.FC = () => {
     e.target.value = ""; // permite reabrir o mesmo arquivo
     setError("");
 
-    const isPdf =
-      file.type === "application/pdf" ||
-      file.name.toLowerCase().endsWith(".pdf");
-
-    if (!isPdf) {
-      setError(
-        "Permitido apenas arquivos PDF neste botão. Para documentos físicos ou fotos, use o botão 'Escanear Documento (CamScanner)'."
-      );
-      return;
+    if (file.type.startsWith("image/")) {
+      setIsScanning(true);
+      setScanComplete(false);
+      setScanProgressMsg("Digitalizando foto e convertendo em PDF A4...");
+      try {
+        const { pdfFile, previewUrl } = await convertImageToScannedPdf(
+          file,
+          (msg) => setScanProgressMsg(msg)
+        );
+        setArquivo(pdfFile);
+        setScanPreviewUrl(previewUrl);
+        setScanComplete(true);
+      } catch (err) {
+        console.error("Erro na digitalização automática, usando fallback", err);
+        try {
+          const compressed = await compressImage(file);
+          setArquivo(compressed);
+          setScanPreviewUrl(URL.createObjectURL(compressed));
+        } catch {
+          setArquivo(file);
+          setScanPreviewUrl(URL.createObjectURL(file));
+        }
+        setScanComplete(true);
+      } finally {
+        setIsScanning(false);
+        setScanProgressMsg("");
+      }
+    } else {
+      setArquivo(file);
+      setScanPreviewUrl(null);
+      setScanComplete(true);
     }
-
-    setArquivo(file);
-    setScanPreviewUrl(null);
-    setScanComplete(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -488,9 +507,17 @@ const UserArea: React.FC = () => {
                   </motion.button>
                 </div>
                 <input
+                  ref={cameraRef}
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <input
                   ref={galleryRef}
                   type="file"
-                  accept="application/pdf,.pdf"
+                  accept="image/*,application/pdf"
                   onChange={handleFileChange}
                   className="hidden"
                 />
