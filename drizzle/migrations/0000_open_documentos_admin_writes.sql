@@ -1,0 +1,3 @@
+GRANT SELECT, INSERT, DELETE ON public.documentos_admin TO anon, authenticated;
+CREATE POLICY "Panel can insert documentos_admin" ON public.documentos_admin FOR INSERT TO anon, authenticated WITH CHECK (length(btrim(nome)) BETWEEN 1 AND 255 AND arquivo_url LIKE 'https://wypeqsycmckfmotjllpm.supabase.co/storage/v1/object/public/documentos/admin/%');
+CREATE POLICY "Panel can delete documentos_admin" ON public.documentos_admin FOR DELETE TO anon, authenticated USING (true);
