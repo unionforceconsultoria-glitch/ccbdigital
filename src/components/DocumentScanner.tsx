@@ -10,15 +10,12 @@ import {
   Maximize2,
   Image as ImageIcon,
   Sparkles,
+  FileText,
 } from "lucide-react";
 import jsPDF from "jspdf";
 
 type Point = { x: number; y: number };
 
-/**
- * Resolve homografia 3x3 mapeando 4 pontos-origem para 4 pontos-destino.
- * Retorna matriz aplicável em (x,y) -> ( (h0 x + h1 y + h2)/(h6 x + h7 y + 1), ... )
- */
 function computeHomography(src: Point[], dst: Point[]): number[] {
   const A: number[][] = [];
   const b: number[] = [];
@@ -57,6 +54,82 @@ function orderCorners(pts: Point[]): Point[] {
   return [top[0], top[1], bot[1], bot[0]]; // TL, TR, BR, BL
 }
 
+/**
+ * Filtro de Digitalização Preto e Branco de Alta Definição (Estilo Xerox / Scanner B&W):
+ * - Papel 100% branco (#FFFFFF) sem sombras ou amarelado
+ * - Textos, números, carimbos e assinaturas em preto bem escuro e legível (#000000)
+ */
+function applyCrispBlackAndWhite(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number
+) {
+  const totalPixels = width * height;
+  const gray = new Uint8Array(totalPixels);
+
+  for (let i = 0, j = 0; i < data.length; i += 4, j++) {
+    gray[j] = Math.round(
+      0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+    );
+  }
+
+  // Análise em blocos para compensar iluminação desigual da foto
+  const blockSize = Math.max(16, Math.floor(Math.min(width, height) / 22));
+  const gridW = Math.ceil(width / blockSize);
+  const gridH = Math.ceil(height / blockSize);
+  const bgMap = new Uint8Array(gridW * gridH);
+
+  for (let gy = 0; gy < gridH; gy++) {
+    for (let gx = 0; gx < gridW; gx++) {
+      let maxVal = 0;
+      let sum = 0;
+      let count = 0;
+      const y0 = gy * blockSize;
+      const y1 = Math.min(height, y0 + blockSize);
+      const x0 = gx * blockSize;
+      const x1 = Math.min(width, x0 + blockSize);
+
+      for (let y = y0; y < y1; y += 2) {
+        for (let x = x0; x < x1; x += 2) {
+          const v = gray[y * width + x];
+          sum += v;
+          count++;
+          if (v > maxVal) maxVal = v;
+        }
+      }
+      const avg = count > 0 ? sum / count : 128;
+      bgMap[gy * gridW + gx] = Math.round(maxVal * 0.75 + avg * 0.25);
+    }
+  }
+
+  for (let y = 0; y < height; y++) {
+    const gy = Math.min(gridH - 1, Math.floor(y / blockSize));
+    for (let x = 0; x < width; x++) {
+      const gx = Math.min(gridW - 1, Math.floor(x / blockSize));
+      const localPaper = bgMap[gy * gridW + gx];
+      const val = gray[y * width + x];
+      const idx = (y * width + x) * 4;
+
+      const threshold = Math.max(75, localPaper - 20);
+
+      if (val >= threshold) {
+        data[idx] = 255;
+        data[idx + 1] = 255;
+        data[idx + 2] = 255;
+      } else {
+        const dist = threshold - val;
+        const darkness = Math.min(1, dist / 28);
+        const finalColor = Math.round((1 - darkness) * 35);
+
+        data[idx] = finalColor;
+        data[idx + 1] = finalColor;
+        data[idx + 2] = finalColor;
+      }
+      data[idx + 3] = 255;
+    }
+  }
+}
+
 interface Props {
   onCancel: () => void;
   onDone: (file: File, previewUrl?: string) => void;
@@ -69,6 +142,7 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
   const imgRef = useRef<HTMLImageElement | null>(null);
 
   const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [filterMode, setFilterMode] = useState<"bw" | "color">("bw"); // Padrão: Preto e Branco
   const [imgSize, setImgSize] = useState<{ w: number; h: number }>({
     w: 0,
     h: 0,
@@ -77,12 +151,11 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
     w: 0,
     h: 0,
   });
-  const [corners, setCorners] = useState<Point[]>([]); // em coordenadas da imagem original
+  const [corners, setCorners] = useState<Point[]>([]);
   const [dragging, setDragging] = useState<number | null>(null);
   const [processing, setProcessing] = useState(false);
   const [processingMsg, setProcessingMsg] = useState("");
 
-  // Abre a câmera do celular automaticamente assim que o scanner é acionado
   useEffect(() => {
     const t = setTimeout(() => cameraInputRef.current?.click(), 80);
     return () => clearTimeout(t);
@@ -101,7 +174,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
       imgRef.current = img;
       setImgSrc(url);
       setImgSize({ w: img.naturalWidth, h: img.naturalHeight });
-      // Cantos padrão estilo CamScanner com 6% de margem
       const mx = img.naturalWidth * 0.06;
       const my = img.naturalHeight * 0.06;
       setCorners([
@@ -114,7 +186,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
     img.src = url;
   };
 
-  // Recalcula o tamanho de exibição preservando aspecto
   useEffect(() => {
     if (!imgSize.w) return;
     const compute = () => {
@@ -150,7 +221,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
     setCorners((c) => c.map((p, i) => (i === dragging ? clamped : p)));
   };
 
-  // Redefinir cantos com margem
   const resetCorners = () => {
     if (!imgSize.w) return;
     const mx = imgSize.w * 0.06;
@@ -163,7 +233,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
     ]);
   };
 
-  // Selecionar tela inteira da foto
   const selectAll = () => {
     if (!imgSize.w) return;
     const m = 4;
@@ -175,7 +244,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
     ]);
   };
 
-  // Girar 90 graus no sentido horário (recurso clássico do CamScanner)
   const rotate90 = () => {
     if (!imgRef.current || !imgSrc) return;
     const c = document.createElement("canvas");
@@ -206,7 +274,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
     newImg.src = newUrl;
   };
 
-  // Confirma e processa com filtro CamScanner e gera PDF A4
   const confirm = async () => {
     if (!imgRef.current || corners.length !== 4) return;
     setProcessing(true);
@@ -216,7 +283,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
       const ordered = orderCorners(corners);
       const [tl, tr, br, bl] = ordered;
 
-      // Dimensões do documento retificado
       const widthTop = Math.hypot(tr.x - tl.x, tr.y - tl.y);
       const widthBot = Math.hypot(br.x - bl.x, br.y - bl.y);
       const heightL = Math.hypot(bl.x - tl.x, bl.y - tl.y);
@@ -225,7 +291,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
       let outW = Math.round(Math.max(widthTop, widthBot));
       let outH = Math.round(Math.max(heightL, heightR));
 
-      // Limite para manter alta resolução sem sobrecarregar a memória
       const MAX = 2000;
       if (outW > MAX || outH > MAX) {
         const r = Math.min(MAX / outW, MAX / outH);
@@ -241,7 +306,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
       ];
       const Hinv = computeHomography(dstPts, [tl, tr, br, bl]);
 
-      // Desenha imagem original no canvas para amostragem
       const srcCanvas = document.createElement("canvas");
       srcCanvas.width = imgSize.w;
       srcCanvas.height = imgSize.h;
@@ -260,7 +324,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
       const sw = imgSize.w;
       const sh = imgSize.h;
 
-      // Amostragem bilinear com transformação de perspectiva
       for (let y = 0; y < outH; y++) {
         for (let x = 0; x < outW; x++) {
           const denom = Hinv[6] * x + Hinv[7] * y + Hinv[8];
@@ -297,52 +360,48 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
         }
       }
 
-      setProcessingMsg("Aplicando realce de digitalização CamScanner...");
-
-      // Filtro CamScanner "Magic Color" (Colorido Realçado com Fundo Branco)
-      let sumBg = 0;
-      let countBg = 0;
-      const sampleStep = Math.max(4, Math.floor(out.length / 40000));
-      for (let i = 0; i < out.length; i += sampleStep * 4) {
-        const lum = 0.299 * out[i] + 0.587 * out[i + 1] + 0.114 * out[i + 2];
-        if (lum > 120) {
-          sumBg += lum;
-          countBg++;
+      if (filterMode === "bw") {
+        setProcessingMsg("Digitalizando em Preto e Branco de alta visibilidade...");
+        applyCrispBlackAndWhite(out, outW, outH);
+      } else {
+        setProcessingMsg("Aplicando realce colorido...");
+        // Realce colorido com branqueamento de fundo
+        let sumBg = 0;
+        let countBg = 0;
+        for (let i = 0; i < out.length; i += 40) {
+          const lum = 0.299 * out[i] + 0.587 * out[i + 1] + 0.114 * out[i + 2];
+          if (lum > 120) {
+            sumBg += lum;
+            countBg++;
+          }
         }
-      }
-
-      const paperWhite = countBg > 0 ? sumBg / countBg : 205;
-      const threshold = Math.min(235, Math.max(175, paperWhite - 15));
-      const contrast = 1.35;
-
-      for (let i = 0; i < out.length; i += 4) {
-        const r = out[i];
-        const g = out[i + 1];
-        const b = out[i + 2];
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-
-        if (lum >= threshold) {
-          // Fundo branco puro para economizar tinta e dar aspecto de scanner físico
-          out[i] = 255;
-          out[i + 1] = 255;
-          out[i + 2] = 255;
-        } else {
-          // Aumenta o contraste das linhas, texto e carimbos
-          const factor = Math.min(1, lum / threshold);
-          const darkened = Math.pow(factor, contrast) * 255;
-          const ratio = lum > 0 ? darkened / lum : 1;
-          out[i] = Math.min(255, Math.max(0, Math.round(r * ratio)));
-          out[i + 1] = Math.min(255, Math.max(0, Math.round(g * ratio)));
-          out[i + 2] = Math.min(255, Math.max(0, Math.round(b * ratio)));
+        const paperWhite = countBg > 0 ? sumBg / countBg : 205;
+        const threshold = Math.min(235, Math.max(175, paperWhite - 15));
+        for (let i = 0; i < out.length; i += 4) {
+          const r = out[i];
+          const g = out[i + 1];
+          const b = out[i + 2];
+          const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+          if (lum >= threshold) {
+            out[i] = 255;
+            out[i + 1] = 255;
+            out[i + 2] = 255;
+          } else {
+            const factor = Math.min(1, lum / threshold);
+            const darkened = Math.pow(factor, 1.35) * 255;
+            const ratio = lum > 0 ? darkened / lum : 1;
+            out[i] = Math.min(255, Math.max(0, Math.round(r * ratio)));
+            out[i + 1] = Math.min(255, Math.max(0, Math.round(g * ratio)));
+            out[i + 2] = Math.min(255, Math.max(0, Math.round(b * ratio)));
+          }
         }
       }
 
       octx.putImageData(outImg, 0, 0);
 
       setProcessingMsg("Gerando documento PDF A4 oficial...");
-      const jpegDataUrl = outCanvas.toDataURL("image/jpeg", 0.9);
+      const jpegDataUrl = outCanvas.toDataURL("image/jpeg", 0.92);
 
-      // Criação do PDF A4 com margens seguras
       const isLandscape = outW > outH;
       const pdf = new jsPDF({
         orientation: isLandscape ? "l" : "p",
@@ -377,7 +436,7 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
       const pdfBlob = pdf.output("blob");
       const file = new File(
         [pdfBlob],
-        `documento-camscanner-${Date.now()}.pdf`,
+        `documento-digitalizado-PB-${Date.now()}.pdf`,
         { type: "application/pdf", lastModified: Date.now() }
       );
 
@@ -414,22 +473,41 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
           className="hidden"
         />
 
-        {/* Barra Superior estilo CamScanner */}
-        <div className="flex items-center justify-between px-4 py-3 text-white bg-black/80 backdrop-blur z-10 border-b border-white/10">
+        {/* Barra Superior */}
+        <div className="flex items-center justify-between px-3 py-2.5 text-white bg-black/80 backdrop-blur z-10 border-b border-white/10">
           <button
             onClick={onCancel}
             className="p-2 hover:bg-white/10 rounded-full transition-colors"
             aria-label="Cancelar"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <span className="font-bold text-sm tracking-wide">
-              {imgSrc ? "Ajustar Bordas (CamScanner)" : "Scanner Inteligente"}
-            </span>
-          </div>
+          {/* Seletor de Modo: P&B (Padrão) vs Colorido */}
+          {imgSrc && (
+            <div className="flex bg-white/10 rounded-xl p-1 gap-1">
+              <button
+                onClick={() => setFilterMode("bw")}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  filterMode === "bw"
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-white/70 hover:text-white"
+                }`}
+              >
+                P&B Nítido
+              </button>
+              <button
+                onClick={() => setFilterMode("color")}
+                className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                  filterMode === "color"
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-white/70 hover:text-white"
+                }`}
+              >
+                Colorido
+              </button>
+            </div>
+          )}
 
           {imgSrc ? (
             <div className="flex items-center gap-1">
@@ -456,11 +534,11 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
               </button>
             </div>
           ) : (
-            <div className="w-10" />
+            <div className="w-9" />
           )}
         </div>
 
-        {/* Área Central / Visualização da Câmera e Recorte */}
+        {/* Área Central / Visualização */}
         <div
           ref={containerRef}
           className="flex-1 flex items-center justify-center overflow-hidden relative bg-neutral-950 p-2"
@@ -472,7 +550,7 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
               </div>
               <h3 className="font-bold text-lg text-white">Scanner de Documentos</h3>
               <p className="text-xs text-white/60">
-                Tire a foto da folha. O aplicativo fará o recorte e a digitalização em PDF A4 automaticamente.
+                Tire a foto da folha. O sistema cortará as bordas e digitalizará em Preto e Branco nítido em PDF A4.
               </p>
               <div className="flex flex-col gap-2 w-full mt-2">
                 <button
@@ -506,7 +584,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
                 draggable={false}
               />
 
-              {/* Polígono de seleção azul translúcido com linhas */}
               <svg
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 viewBox={`0 0 ${imgSize.w} ${imgSize.h}`}
@@ -523,7 +600,6 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
                 )}
               </svg>
 
-              {/* Puxadores redondos dos 4 cantos */}
               {corners.map((p, i) => (
                 <div
                   key={i}
@@ -547,7 +623,7 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
           )}
         </div>
 
-        {/* Barra Inferior de Ações estilo CamScanner */}
+        {/* Barra Inferior */}
         {imgSrc && (
           <div className="p-4 bg-black/90 backdrop-blur border-t border-white/10 flex flex-col gap-2">
             {processing && (
@@ -580,7 +656,7 @@ const DocumentScanner: React.FC<Props> = ({ onCancel, onDone }) => {
                 ) : (
                   <>
                     <Check className="w-5 h-5" />
-                    <span>Digitalizar e Gerar PDF A4</span>
+                    <span>Gerar PDF P&B A4</span>
                   </>
                 )}
               </button>

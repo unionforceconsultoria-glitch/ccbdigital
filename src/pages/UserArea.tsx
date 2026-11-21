@@ -9,6 +9,9 @@ import ProtocolStamp from "@/components/ProtocolStamp";
 import TutorialModal from "@/components/TutorialModal";
 import DocumentScanner from "@/components/DocumentScanner";
 import { convertImageToScannedPdf } from "@/lib/scanToPdf";
+import { analyzeDocumentWithAI } from "@/lib/aiDocumentReader";
+import { toast } from "sonner";
+import { Sparkles, Bot, Key } from "lucide-react";
 
 // Garante um nome de arquivo válido em qualquer plataforma (iOS às vezes envia "image.heic" ou sem nome)
 const nomeJpeg = (original: string) => {
@@ -139,6 +142,9 @@ const UserArea: React.FC = () => {
   const [scanComplete, setScanComplete] = useState(false);
   const [scanPreviewUrl, setScanPreviewUrl] = useState<string | null>(null);
   const [scanProgressMsg, setScanProgressMsg] = useState("");
+  const [isAIAnalyzing, setIsAIAnalyzing] = useState(false);
+  const [showAIKeyModal, setShowAIKeyModal] = useState(false);
+  const [geminiKeyInput, setGeminiKeyInput] = useState(() => localStorage.getItem("GEMINI_API_KEY") || "");
   const [isUploading, setIsUploading] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -268,16 +274,100 @@ const UserArea: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       <TutorialModal forceOpen={showTutorial} onClose={() => setShowTutorial(false)} />
+      {showAIKeyModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-background rounded-2xl max-w-sm w-full p-5 shadow-2xl border border-border space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-sm text-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" />
+                Configurar IA (Google Gemini)
+              </h3>
+              <button
+                onClick={() => setShowAIKeyModal(false)}
+                className="text-muted-foreground hover:text-foreground p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Insira sua chave gratuita do Google AI Studio para a IA ler o nome da igreja, mês e tipo do formulário diretamente da foto.
+            </p>
+            <input
+              type="password"
+              placeholder="Cole sua API Key (AIzaSy...)"
+              value={geminiKeyInput}
+              onChange={(e) => setGeminiKeyInput(e.target.value)}
+              className="w-full text-xs px-3 py-2.5 rounded-xl bg-secondary border border-border focus:border-primary focus:outline-none"
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.setItem("GEMINI_API_KEY", geminiKeyInput.trim());
+                  setShowAIKeyModal(false);
+                  toast.success("Chave da IA salva com sucesso!");
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs hover:brightness-110 transition-all"
+              >
+                Salvar Chave
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAIKeyModal(false)}
+                className="py-2.5 px-3 rounded-xl bg-secondary text-foreground text-xs font-semibold hover:bg-muted transition-all"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showScanner && (
         <DocumentScanner
           onCancel={() => setShowScanner(false)}
-          onDone={(file, previewUrl) => {
+          onDone={async (file, previewUrl) => {
             setShowScanner(false);
             setArquivo(file);
             if (previewUrl) setScanPreviewUrl(previewUrl);
             setScanComplete(true);
             setIsScanning(false);
             setError("");
+
+            // Leitura inteligente via IA para autopreenchimento
+            if (previewUrl) {
+              setIsAIAnalyzing(true);
+              try {
+                const aiResult = await analyzeDocumentWithAI(previewUrl, igrejas);
+                if (aiResult) {
+                  const filled: string[] = [];
+                  if (aiResult.igrejaId) {
+                    setIgrejaId(String(aiResult.igrejaId));
+                    filled.push(aiResult.igrejaNome || "Igreja");
+                  }
+                  if (aiResult.tipoFormulario) {
+                    setTipoFormulario(aiResult.tipoFormulario);
+                    filled.push(aiResult.tipoFormulario.slice(0, 15) + "...");
+                  }
+                  if (aiResult.mesReferencia) {
+                    setMesReferencia(aiResult.mesReferencia);
+                  }
+                  if (aiResult.nomeResponsavel) {
+                    setNomeResponsavel(aiResult.nomeResponsavel);
+                  }
+
+                  if (filled.length > 0) {
+                    toast.success(
+                      `✨ IA identificou e preencheu: ${filled.join(" · ")}`,
+                      { duration: 5000 }
+                    );
+                  }
+                }
+              } catch (err) {
+                console.error("Erro na leitura de IA:", err);
+              } finally {
+                setIsAIAnalyzing(false);
+              }
+            }
           }}
         />
       )}
@@ -487,6 +577,36 @@ const UserArea: React.FC = () => {
                     <span>Anexar PDF</span>
                   </motion.button>
                 </div>
+
+                {/* Status e Atalho da IA */}
+                <div className="flex items-center justify-between mt-2 px-1">
+                  <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                    <Sparkles className="w-3.5 h-3.5 text-primary" />
+                    Leitura inteligente com IA
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAIKeyModal(true)}
+                    className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <Key className="w-3 h-3" />
+                    {localStorage.getItem("GEMINI_API_KEY")
+                      ? "Chave IA Ativa ✓"
+                      : "Configurar Chave IA"}
+                  </button>
+                </div>
+
+                {isAIAnalyzing && (
+                  <div className="mt-2 bg-primary/10 border border-primary/30 rounded-xl p-3 flex items-center gap-3 text-xs text-primary animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <div>
+                      <p className="font-bold">IA analisando o documento...</p>
+                      <p className="text-[11px] opacity-80">
+                        Identificando congregação, mês e tipo de formulário automaticamente.
+                      </p>
+                    </div>
+                  </div>
+                )}
                 <input
                   ref={galleryRef}
                   type="file"
