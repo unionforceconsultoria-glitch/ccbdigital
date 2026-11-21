@@ -207,7 +207,7 @@ export async function printUnifiedA4(
   onProgress?: (current: number, total: number, message: string) => void
 ): Promise<void> {
   const pdfBytes = await generateUnifiedA4Pdf(documentos, onProgress);
-  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
 
   // Abre em uma nova aba com o visualizador de PDF padrão do navegador
@@ -227,6 +227,6 @@ export async function downloadUnifiedA4(
   onProgress?: (current: number, total: number, message: string) => void
 ): Promise<void> {
   const pdfBytes = await generateUnifiedA4Pdf(documentos, onProgress);
-  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
   saveAs(blob, nomeArquivo);
 }
