@@ -578,21 +578,20 @@ const UserArea: React.FC = () => {
                   </motion.button>
                 </div>
 
-                {/* Status e Atalho da IA */}
+                {/* Status da IA Ativa */}
                 <div className="flex items-center justify-between mt-2 px-1">
-                  <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                  <span className="text-[11px] font-semibold text-primary flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-primary" />
-                    Leitura inteligente com IA
+                    Leitura inteligente com IA Ativa ✓
                   </span>
                   <button
                     type="button"
                     onClick={() => setShowAIKeyModal(true)}
-                    className="text-[11px] text-primary hover:underline flex items-center gap-1 font-medium"
+                    className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+                    title="Alterar chave da IA"
                   >
                     <Key className="w-3 h-3" />
-                    {localStorage.getItem("GEMINI_API_KEY")
-                      ? "Chave IA Ativa ✓"
-                      : "Configurar Chave IA"}
+                    Chave Configurada
                   </button>
                 </div>
 
