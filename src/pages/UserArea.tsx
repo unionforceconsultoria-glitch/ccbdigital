@@ -8,6 +8,7 @@ import { ScanLine } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 import TutorialModal from "@/components/TutorialModal";
 import DocumentScanner from "@/components/DocumentScanner";
+import { convertImageToScannedPdf } from "@/lib/scanToPdf";
 
 // Garante um nome de arquivo válido em qualquer plataforma (iOS às vezes envia "image.heic" ou sem nome)
 const nomeJpeg = (original: string) => {
@@ -136,6 +137,8 @@ const UserArea: React.FC = () => {
   const [categoriaFiltro, setCategoriaFiltro] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanComplete, setScanComplete] = useState(false);
+  const [scanPreviewUrl, setScanPreviewUrl] = useState<string | null>(null);
+  const [scanProgressMsg, setScanProgressMsg] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -194,18 +197,33 @@ const UserArea: React.FC = () => {
     if (file.type.startsWith("image/")) {
       setIsScanning(true);
       setScanComplete(false);
+      setScanProgressMsg("Digitalizando foto e convertendo em PDF A4...");
       try {
-        const compressed = await compressImage(file);
-        setArquivo(compressed);
+        const { pdfFile, previewUrl } = await convertImageToScannedPdf(
+          file,
+          (msg) => setScanProgressMsg(msg)
+        );
+        setArquivo(pdfFile);
+        setScanPreviewUrl(previewUrl);
+        setScanComplete(true);
       } catch (err) {
-        console.error("Erro ao comprimir", err);
-        setArquivo(file);
+        console.error("Erro na digitalização automática, usando fallback", err);
+        try {
+          const compressed = await compressImage(file);
+          setArquivo(compressed);
+          setScanPreviewUrl(URL.createObjectURL(compressed));
+        } catch {
+          setArquivo(file);
+          setScanPreviewUrl(URL.createObjectURL(file));
+        }
+        setScanComplete(true);
       } finally {
         setIsScanning(false);
-        setScanComplete(true);
+        setScanProgressMsg("");
       }
     } else {
       setArquivo(file);
+      setScanPreviewUrl(null);
       setScanComplete(true);
     }
   };
@@ -256,6 +274,8 @@ const UserArea: React.FC = () => {
     setNomeResponsavel("");
     setMesReferencia(defaultMonth);
     setArquivo(null);
+    setScanPreviewUrl(null);
+    setScanProgressMsg("");
     setProtocolo(null);
     setEnvioInfo(null);
     setCopiado(false);
@@ -515,39 +535,77 @@ const UserArea: React.FC = () => {
                 />
                 {arquivo && (
                   <div className="mt-2 relative overflow-hidden rounded-lg">
-                    {arquivo.type.startsWith("image/") && (
-                      <div className="mx-auto bg-secondary rounded-lg overflow-hidden mb-2" style={{ aspectRatio: "210 / 297", maxWidth: "240px" }}>
+                    {/* Miniatura do documento digitalizado em A4 */}
+                    {scanPreviewUrl ? (
+                      <div
+                        className="mx-auto bg-secondary rounded-xl overflow-hidden mb-2 border border-border shadow-sm p-1"
+                        style={{ aspectRatio: "210 / 297", maxWidth: "230px" }}
+                      >
+                        <img
+                          src={scanPreviewUrl}
+                          alt="Documento digitalizado em A4"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      </div>
+                    ) : arquivo.type.startsWith("image/") ? (
+                      <div
+                        className="mx-auto bg-secondary rounded-xl overflow-hidden mb-2 border border-border shadow-sm p-1"
+                        style={{ aspectRatio: "210 / 297", maxWidth: "230px" }}
+                      >
                         <img
                           src={URL.createObjectURL(arquivo)}
                           alt="Pré-visualização"
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-contain rounded-lg"
                         />
                       </div>
-                    )}
-                    <div className={`flex items-center gap-2 text-sm text-foreground px-3 py-2 ${scanComplete ? 'bg-green-50 dark:bg-green-950/30' : 'bg-secondary'} transition-colors duration-300`}>
+                    ) : null}
+
+                    <div
+                      className={`flex items-center gap-2 text-sm text-foreground px-3 py-2.5 rounded-xl ${
+                        scanComplete
+                          ? "bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900/50"
+                          : "bg-secondary"
+                      } transition-colors duration-300`}
+                    >
                       {isScanning ? (
-                        <Loader2 className="w-4 h-4 text-primary animate-spin" />
+                        <Loader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
                       ) : scanComplete ? (
-                        <Check className="w-4 h-4 text-green-600" />
+                        <Check className="w-4 h-4 text-green-600 shrink-0" />
                       ) : (
-                        <FileText className="w-4 h-4 text-primary" />
+                        <FileText className="w-4 h-4 text-primary shrink-0" />
                       )}
-                      <span className="truncate">{arquivo.name}</span>
+
+                      <div className="flex-1 min-w-0">
+                        <span className="truncate block font-medium text-xs sm:text-sm">
+                          {arquivo.name}
+                        </span>
+                        {isScanning && scanProgressMsg && (
+                          <span className="text-[11px] text-primary font-normal block truncate">
+                            {scanProgressMsg}
+                          </span>
+                        )}
+                      </div>
+
                       {scanComplete && (
-                        <span className="ml-auto text-xs font-semibold text-green-600 whitespace-nowrap">
-                          Carregado ✓
+                        <span className="ml-auto text-[11px] font-bold text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/60 px-2 py-0.5 rounded-full whitespace-nowrap">
+                          PDF A4 Pronto ✓
                         </span>
                       )}
                     </div>
+
                     {/* Scanning bar animation */}
                     {isScanning && (
                       <motion.div
                         initial={{ x: "-100%" }}
                         animate={{ x: "100%" }}
-                        transition={{ duration: 1.2, repeat: Infinity, ease: "linear" }}
+                        transition={{
+                          duration: 1.2,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
                         className="absolute top-0 left-0 w-full h-full pointer-events-none"
                       >
-                        <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
+                        <div className="w-1/3 h-full bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
                       </motion.div>
                     )}
                   </div>
