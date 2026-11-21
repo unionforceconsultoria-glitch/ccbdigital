@@ -1,3 +1,4 @@
+import { downloadAsPdf } from "@/lib/downloadAsPdf";
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -715,16 +716,7 @@ const UserArea: React.FC = () => {
                     <button
                       onClick={async () => {
                         try {
-                          const response = await fetch(doc.arquivo_url);
-                          const blob = await response.blob();
-                          const url = window.URL.createObjectURL(blob);
-                          const a = document.createElement("a");
-                          a.href = url;
-                          a.download = doc.nome || "documento";
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                          window.URL.revokeObjectURL(url);
+                          await downloadAsPdf(doc.arquivo_url, doc.nome);
                         } catch {
                           window.open(doc.arquivo_url, "_blank");
                         }

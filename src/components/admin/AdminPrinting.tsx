@@ -1,3 +1,4 @@
+import { downloadAsPdf } from "@/lib/downloadAsPdf";
 import React, { useState } from "react";
 import { tiposFormulario } from "@/data/churches";
 import { useEnvios, useIgrejas } from "@/lib/storage";
@@ -408,9 +409,12 @@ const AdminPrinting: React.FC = () => {
 
                     <a
                       href={envio.arquivo_url}
-                      download={envio.arquivo_nome}
-                      onClick={(e) => e.stopPropagation()}
-                      title="Baixar arquivo original"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        downloadAsPdf(envio.arquivo_url, envio.arquivo_nome).catch(() => window.open(envio.arquivo_url, "_blank"));
+                      }}
+                      title="Baixar em PDF"
                       className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors"
                     >
                       <Download className="w-4 h-4" />
