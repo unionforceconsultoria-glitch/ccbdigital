@@ -290,9 +290,10 @@ const UserArea: React.FC = () => {
       {showScanner && (
         <DocumentScanner
           onCancel={() => setShowScanner(false)}
-          onDone={(file) => {
+          onDone={(file, previewUrl) => {
             setShowScanner(false);
             setArquivo(file);
+            if (previewUrl) setScanPreviewUrl(previewUrl);
             setScanComplete(true);
             setIsScanning(false);
             setError("");
@@ -472,50 +473,37 @@ const UserArea: React.FC = () => {
                 />
               </div>
 
-              {/* Upload */}
+              {/* Upload - CamScanner */}
               <div>
                 <label className="block text-sm font-semibold text-foreground mb-2">
-                  Arquivo (PDF ou Imagem)
+                  Documento (Digitalização CamScanner ou PDF)
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <motion.button
                     type="button"
-                    whileTap={{ scale: 0.96 }}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setError("");
-                      cameraRef.current?.click();
-                    }}
-                    className="touch-target bg-primary text-primary-foreground rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold hover:brightness-110 transition-all px-1"
-                  >
-                    <Camera className="w-5 h-5" />
-                    Foto
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    whileTap={{ scale: 0.96 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={(e) => {
                       e.preventDefault();
                       setError("");
                       setShowScanner(true);
                     }}
-                    className="touch-target bg-foreground text-background rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold hover:brightness-110 transition-all px-1"
+                    className="flex-1 touch-target bg-primary text-primary-foreground rounded-2xl flex items-center justify-center gap-2.5 py-3.5 px-4 font-bold text-sm sm:text-base hover:brightness-110 shadow-md transition-all"
                   >
-                    <ScanLine className="w-5 h-5" />
-                    Escanear
+                    <ScanLine className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <span>Escanear Documento (CamScanner)</span>
                   </motion.button>
                   <motion.button
                     type="button"
-                    whileTap={{ scale: 0.96 }}
+                    whileTap={{ scale: 0.98 }}
                     onClick={(e) => {
                       e.preventDefault();
                       setError("");
                       galleryRef.current?.click();
                     }}
-                    className="touch-target bg-secondary text-foreground rounded-xl flex flex-col items-center justify-center gap-1 text-xs font-bold hover:brightness-95 transition-all border border-border px-1"
+                    className="touch-target bg-secondary text-foreground rounded-2xl flex items-center justify-center gap-2 py-3 px-4 text-xs sm:text-sm font-semibold hover:bg-muted border border-border transition-all"
                   >
-                    <Upload className="w-5 h-5" />
-                    Arquivo
+                    <Upload className="w-4 h-4" />
+                    <span>Anexar PDF</span>
                   </motion.button>
                 </div>
                 <input
