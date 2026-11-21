@@ -62,63 +62,44 @@ export async function convertImageToScannedPdf(
     const imgData = ctx.getImageData(0, 0, width, height);
     const data = imgData.data;
 
-    // Aplica o filtro de digitalização Preto e Branco de alta visibilidade
-    const totalPixels = width * height;
-    const gray = new Uint8Array(totalPixels);
-    for (let i = 0, j = 0; i < data.length; i += 4, j++) {
-      gray[j] = Math.round(
-        0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
-      );
-    }
-
-    const blockSize = Math.max(16, Math.floor(Math.min(width, height) / 22));
-    const gridW = Math.ceil(width / blockSize);
-    const gridH = Math.ceil(height / blockSize);
-    const bgMap = new Uint8Array(gridW * gridH);
-
-    for (let gy = 0; gy < gridH; gy++) {
-      for (let gx = 0; gx < gridW; gx++) {
-        let maxVal = 0;
-        let sum = 0;
-        let count = 0;
-        const y0 = gy * blockSize;
-        const y1 = Math.min(height, y0 + blockSize);
-        const x0 = gx * blockSize;
-        const x1 = Math.min(width, x0 + blockSize);
-        for (let y = y0; y < y1; y += 2) {
-          for (let x = x0; x < x1; x += 2) {
-            const v = gray[y * width + x];
-            sum += v;
-            count++;
-            if (v > maxVal) maxVal = v;
-          }
-        }
-        const avg = count > 0 ? sum / count : 128;
-        bgMap[gy * gridW + gx] = Math.round(maxVal * 0.75 + avg * 0.25);
+    // Amostragem para calcular a cor média do fundo do papel
+    let sumLight = 0;
+    let lightSamples = 0;
+    const sampleStep = Math.max(4, Math.floor(data.length / 50000));
+    for (let i = 0; i < data.length; i += sampleStep * 4) {
+      const lum = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      if (lum > 120) {
+        sumLight += lum;
+        lightSamples++;
       }
     }
 
-    for (let y = 0; y < height; y++) {
-      const gy = Math.min(gridH - 1, Math.floor(y / blockSize));
-      for (let x = 0; x < width; x++) {
-        const gx = Math.min(gridW - 1, Math.floor(x / blockSize));
-        const localPaper = bgMap[gy * gridW + gx];
-        const val = gray[y * width + x];
-        const idx = (y * width + x) * 4;
-        const threshold = Math.max(75, localPaper - 20);
+    const avgPaperLum = lightSamples > 0 ? sumLight / lightSamples : 205;
+    // Ponto de corte para branco puro
+    const paperThreshold = Math.min(235, Math.max(175, avgPaperLum - 15));
+    const contrast = 1.35;
 
-        if (val >= threshold) {
-          data[idx] = 255;
-          data[idx + 1] = 255;
-          data[idx + 2] = 255;
-        } else {
-          const dist = threshold - val;
-          const darkness = Math.min(1, dist / 28);
-          const finalColor = Math.round((1 - darkness) * 35);
-          data[idx] = finalColor;
-          data[idx + 1] = finalColor;
-          data[idx + 2] = finalColor;
-        }
+    // Aplica o filtro de digitalização estilo scanner
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+      if (lum >= paperThreshold) {
+        // Fundo do papel vira branco 100% puro
+        data[i] = 255;
+        data[i + 1] = 255;
+        data[i + 2] = 255;
+      } else {
+        // Traço de caneta, impressão e carimbos recebem alto contraste
+        const factor = Math.min(1, lum / paperThreshold);
+        const darkened = Math.pow(factor, contrast) * 255;
+        const ratio = lum > 0 ? darkened / lum : 1;
+
+        data[i] = Math.min(255, Math.max(0, Math.round(r * ratio)));
+        data[i + 1] = Math.min(255, Math.max(0, Math.round(g * ratio)));
+        data[i + 2] = Math.min(255, Math.max(0, Math.round(b * ratio)));
       }
     }
 
