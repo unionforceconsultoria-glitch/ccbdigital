@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
-import { ClipboardList, FileDown, Filter, ChevronDown } from "lucide-react";
+import { ClipboardList, FileDown, Filter, ChevronDown, Trash2, Loader2 } from "lucide-react";
 import { useIgrejas } from "@/lib/storage";
-import { useInventarios, useAllInventarioItens } from "@/lib/inventoryStorage";
-import { calcularResumoInventario } from "@/lib/inventoryUtils";
+import { useInventarios, useAllInventarioItens, useDeleteInventario } from "@/lib/inventoryStorage";
+import { calcularResumoInventario, formatarDataBR, type InventarioRecord } from "@/lib/inventoryUtils";
 import {
   gerarRelatorioIndividualPdf,
   gerarRelatorioGeralPdf,
@@ -27,10 +27,13 @@ const AdminInventario: React.FC = () => {
   const { data: igrejas = [] } = useIgrejas();
   const { data: inventarios = [] } = useInventarios();
   const { data: allData } = useAllInventarioItens();
+  const deleteInventario = useDeleteInventario();
 
   const [filtroIgreja, setFiltroIgreja] = useState("");
   const [filtroPeriodo, setFiltroPeriodo] = useState("");
   const [filtroPendencia, setFiltroPendencia] = useState<PendenciaFiltro>("todas");
+  const [deletingInv, setDeletingInv] = useState<InventarioRecord | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
   const allItens = allData?.itens ?? [];
   const allExtras = allData?.bensExtras ?? [];
@@ -299,7 +302,7 @@ const AdminInventario: React.FC = () => {
                 <th className="text-center px-2 py-3 font-bold">Sem Etiq.</th>
                 <th className="text-center px-2 py-3 font-bold">Diverg.</th>
                 <th className="text-left px-3 py-3 font-bold">Situação</th>
-                <th className="text-right px-3 py-3 font-bold">PDF</th>
+                <th className="text-right px-3 py-3 font-bold">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -333,18 +336,33 @@ const AdminInventario: React.FC = () => {
                     </td>
                     <td className="px-3 py-2.5 text-right">
                       {r.inventario ? (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const itens = allItens.filter((i) => i.inventario_id === r.inventario!.id);
-                            const extras = allExtras.filter((e) => e.inventario_id === r.inventario!.id);
-                            gerarRelatorioIndividualPdf(r.inventario!, itens, extras).download();
-                          }}
-                          className="p-1.5 rounded-lg bg-secondary hover:bg-primary hover:text-primary-foreground transition-colors"
-                          title="Baixar relatório individual em PDF"
-                        >
-                          <FileDown className="w-4 h-4" />
-                        </button>
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const itens = allItens.filter((i) => i.inventario_id === r.inventario!.id);
+                              const extras = allExtras.filter((e) => e.inventario_id === r.inventario!.id);
+                              gerarRelatorioIndividualPdf(r.inventario!, itens, extras).download();
+                            }}
+                            className="p-1.5 rounded-lg bg-secondary hover:bg-primary hover:text-primary-foreground transition-colors"
+                            title="Baixar relatório individual em PDF"
+                            aria-label={`Baixar PDF de ${r.igreja.nome}`}
+                          >
+                            <FileDown className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDeletingInv(r.inventario);
+                              setDeleteError("");
+                            }}
+                            className="p-1.5 rounded-lg bg-secondary text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                            title="Excluir inventário"
+                            aria-label={`Excluir inventário de ${r.igreja.nome}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -356,6 +374,50 @@ const AdminInventario: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {deletingInv && (
+        <div className="fixed inset-0 z-50 bg-foreground/50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-2xl card-shadow w-full max-w-md p-5 space-y-4">
+            <h3 className="text-base font-bold text-destructive">Excluir Inventário</h3>
+            <p className="text-sm text-foreground">
+              Deseja realmente excluir o inventário de{" "}
+              <strong>{deletingInv.igreja_nome}</strong> ({formatarDataBR(deletingInv.data_inventario)})?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Todos os itens conferidos e bens extras deste inventário serão removidos permanentemente.
+            </p>
+            {deleteError && <p className="text-destructive text-xs font-medium">{deleteError}</p>}
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeletingInv(null);
+                  setDeleteError("");
+                }}
+                className="px-4 py-2.5 rounded-xl bg-secondary text-foreground text-xs font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deleteInventario.isPending}
+                onClick={async () => {
+                  try {
+                    await deleteInventario.mutateAsync(deletingInv.id);
+                    setDeletingInv(null);
+                  } catch (err) {
+                    setDeleteError(err instanceof Error ? err.message : "Erro ao excluir inventário.");
+                  }
+                }}
+                className="px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {deleteInventario.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Excluir definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

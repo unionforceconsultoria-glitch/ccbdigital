@@ -13,7 +13,7 @@ const SYSTEM_INSTRUCTIONS = `Você é um especialista em inventário patrimonial
 Sua tarefa é ler o PDF fornecido (usando extração de texto e OCR visual quando for digitalizado) e extrair TODOS os bens patrimoniais listados no documento.
 
 Formato mais comum — "Relatório de Bens Imobilizado" do sistema oficial da CCB:
-- Coluna à esquerda "Código" (ex.: "22-4471 / 000001"): este é SEMPRE o "codigo_patrimonial" usado na etiqueta física do bem. Preserve exatamente como aparece na coluna "Código".
+- Coluna à esquerda "Código" (ex.: "22-4471 / 000001"): este é SEMPRE o "codigo_patrimonial" usado na etiqueta física do bem. O primeiro número ("22-4471") é o código da igreja e o número após a barra ("000001") é o código do item dentro dessa igreja. Preserve exatamente como aparece na coluna "Código".
 - NÃO confunda o "codigo_patrimonial" com o número prefixo do produto dentro da coluna "Nome" (ex.: "56 - ", "4 - ", "1 - ", "11.006 - "), nem com "Localidade" ("BR 22-4471"), "Conta" ("1101") ou "Nº Documento".
 - Coluna "Nome": use como "descricao" completa do bem.
 - Coluna "Dependência" (ex.: "SALAO DE CULTO", "SALA DE REUNIÃO", "DORMITÓRIO"): use como "localizacao". Se "Dependência" estiver vazia mas a descrição tiver "OBS: <ambiente>" (ex.: "OBS: SALINHA DE ORAÇÃO"), use esse ambiente como "localizacao"; caso contrário null.

@@ -244,10 +244,57 @@ export function somenteAlfanumerico(codigo: string): string {
   return codigo.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 
+export interface ParsedCodigoPatrimonial {
+  codigoIgreja: string | null;
+  codigoItem: string;
+}
+
+/**
+ * Interpreta o código patrimonial oficial da CCB.
+ * Exemplos:
+ * - "22-4471 / 000001" -> { codigoIgreja: "22-4471", codigoItem: "000001" }
+ * - "22/4471 / 001" ou "22/4471/001" -> { codigoIgreja: "22-4471", codigoItem: "001" }
+ * - "000001" ou "1" -> { codigoIgreja: null, codigoItem: "000001" / "1" }
+ */
+export function parseCodigoPatrimonial(rawCode: string): ParsedCodigoPatrimonial | null {
+  const trimmed = rawCode.trim();
+  if (!trimmed) return null;
+
+  // Formato completo com código da igreja (XX-YYYY ou XX/YYYY) + "/" + código do item
+  const fullMatch = trimmed.match(/^(\d{1,4})\s*[-/]\s*(\d{2,6})\s*\/\s*([a-zA-Z0-9]+)$/);
+  if (fullMatch) {
+    const [, regiao, igreja, item] = fullMatch;
+    return {
+      codigoIgreja: `${regiao}-${igreja}`,
+      codigoItem: item!,
+    };
+  }
+
+  // Formato genérico com uma barra separando prefixo e item (ex.: "4471 / 000001")
+  const slashParts = trimmed.split("/").map((p) => p.trim()).filter(Boolean);
+  if (slashParts.length === 2) {
+    return {
+      codigoIgreja: slashParts[0]!.replace(/\s+/g, ""),
+      codigoItem: slashParts[1]!.replace(/\s+/g, ""),
+    };
+  }
+
+  // Apenas o código do item (sem código da igreja)
+  const itemOnly = somenteAlfanumerico(trimmed);
+  if (!itemOnly) return null;
+  return { codigoIgreja: null, codigoItem: itemOnly };
+}
+
+function normalizarNumeroItem(itemCode: string): string {
+  const clean = somenteAlfanumerico(itemCode);
+  return clean.replace(/^0+/, "") || clean;
+}
+
 /**
  * Localiza um item pelo código da etiqueta patrimonial.
- * Aceita o formato oficial CCB ("22-4471 / 000001"), versões sem espaços/pontuação ("224471000001", "22-4471/000001")
- * e, quando inequívoco, apenas o sequencial final ("000001" ou "1").
+ * Aceita o formato oficial CCB ("22-4471 / 000001" ou "22/4471 / 001"), versões sem espaços/pontuação
+ * ("224471000001", "22-4471/000001") e, quando inequívoco e sem prefixo de igreja, apenas o código do item ("000001" ou "1").
+ * Nunca confunde um código de outra igreja (ex.: "22-4472 / 000001") com um item desta igreja ("22-4471 / 000001").
  */
 export function encontrarItemPorCodigo(
   itens: InventarioItem[],
@@ -265,15 +312,33 @@ export function encontrarItemPorCodigo(
   );
   if (byAlnum) return byAlnum;
 
-  // Tenta casar pelo número sequencial após "/" (ex.: "000001" ou "1" em "22-4471 / 000001") se único
-  const digitsNoZeros = alnum.replace(/^0+/, "");
-  if (!digitsNoZeros) return undefined;
+  const parsedInput = parseCodigoPatrimonial(rawCode);
+  if (!parsedInput) return undefined;
+  const targetItem = normalizarNumeroItem(parsedInput.codigoItem);
+
+  // Se o código informado inclui código da igreja, exige o mesmo código da igreja
+  if (parsedInput.codigoIgreja) {
+    const targetIgreja = somenteAlfanumerico(parsedInput.codigoIgreja);
+    return itens.find((i) => {
+      if (!i.codigo_patrimonial) return false;
+      const parsedStored = parseCodigoPatrimonial(i.codigo_patrimonial);
+      if (!parsedStored?.codigoIgreja) return false;
+      return (
+        somenteAlfanumerico(parsedStored.codigoIgreja) === targetIgreja &&
+        normalizarNumeroItem(parsedStored.codigoItem) === targetItem
+      );
+    });
+  }
+
+  // Sem código de igreja: casa apenas pelo código do item após "/" se for único
   const suffixMatches = itens.filter((i) => {
     if (!i.codigo_patrimonial) return false;
-    const parts = i.codigo_patrimonial.split("/");
-    if (parts.length < 2) return false;
-    const suffix = somenteAlfanumerico(parts[parts.length - 1] || "");
-    return suffix === alnum || suffix.replace(/^0+/, "") === digitsNoZeros;
+    const parsedStored = parseCodigoPatrimonial(i.codigo_patrimonial);
+    if (!parsedStored) return false;
+    return (
+      somenteAlfanumerico(parsedStored.codigoItem) === alnum ||
+      normalizarNumeroItem(parsedStored.codigoItem) === targetItem
+    );
   });
   return suffixMatches.length === 1 ? suffixMatches[0] : undefined;
 }

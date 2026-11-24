@@ -5,6 +5,7 @@ import {
   calcularResumoInventario,
   normalizarChaveGrupo,
   encontrarItemPorCodigo,
+  parseCodigoPatrimonial,
   type InventarioItem,
   type BemExtra,
 } from "@/lib/inventoryUtils";
@@ -116,9 +117,32 @@ describe("Inventário Patrimonial — regras de agrupamento e classificação", 
 
     expect(encontrarItemPorCodigo(itens, "22-4471 / 000001")?.id).toBe("1");
     expect(encontrarItemPorCodigo(itens, "22-4471/000001")?.id).toBe("1");
+    expect(encontrarItemPorCodigo(itens, "22/4471 / 001")?.id).toBe("1");
+    expect(encontrarItemPorCodigo(itens, "22/4471/1")?.id).toBe("1");
     expect(encontrarItemPorCodigo(itens, "224471000001")?.id).toBe("1");
     expect(encontrarItemPorCodigo(itens, "000002")?.id).toBe("2");
     expect(encontrarItemPorCodigo(itens, "2")?.id).toBe("2");
     expect(encontrarItemPorCodigo(itens, "999999")).toBeUndefined();
+  });
+
+  it("separa código da igreja e código do item e não confunde etiquetas de outra igreja", () => {
+    expect(parseCodigoPatrimonial("22-4471 / 000001")).toEqual({
+      codigoIgreja: "22-4471",
+      codigoItem: "000001",
+    });
+    expect(parseCodigoPatrimonial("22/4472/002")).toEqual({
+      codigoIgreja: "22-4472",
+      codigoItem: "002",
+    });
+    expect(parseCodigoPatrimonial("001")).toEqual({
+      codigoIgreja: null,
+      codigoItem: "001",
+    });
+
+    const itensIgreja4471 = [
+      makeItem({ id: "1", codigo_patrimonial: "22-4471 / 000001", descricao: "EXTINTOR" }),
+    ];
+    expect(encontrarItemPorCodigo(itensIgreja4471, "22-4472 / 000001")).toBeUndefined();
+    expect(encontrarItemPorCodigo(itensIgreja4471, "22/4472/001")).toBeUndefined();
   });
 });

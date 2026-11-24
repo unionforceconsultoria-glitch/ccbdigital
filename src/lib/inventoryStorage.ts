@@ -173,6 +173,63 @@ export const useCreateInventario = () => {
   });
 };
 
+export const useUpdateInventario = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      igreja_id: number;
+      igreja_nome: string;
+      responsavel: string;
+      data_inventario: string;
+      status?: "em_andamento" | "concluido";
+    }) => {
+      const patch: Record<string, unknown> = {
+        igreja_id: input.igreja_id,
+        igreja_nome: input.igreja_nome,
+        responsavel: input.responsavel.trim(),
+        data_inventario: input.data_inventario,
+      };
+      if (input.status) patch.status = input.status;
+
+      const { data, error } = await supabase
+        .from("inventarios")
+        .update(patch)
+        .eq("id", input.id)
+        .select()
+        .single();
+      if (error) throw error;
+
+      await registrarHistorico(
+        input.id,
+        "editado",
+        `Dados atualizados: ${input.igreja_nome} (${input.data_inventario}) — ${input.responsavel.trim()}.`,
+        input.responsavel.trim(),
+      );
+      return data as unknown as InventarioRecord;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["inventarios"] });
+      qc.invalidateQueries({ queryKey: ["inventario_detalhe", vars.id] });
+    },
+  });
+};
+
+export const useDeleteInventario = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (inventarioId: string) => {
+      const { error } = await supabase.from("inventarios").delete().eq("id", inventarioId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inventarios"] });
+      qc.invalidateQueries({ queryKey: ["inventario_detalhe"] });
+      qc.invalidateQueries({ queryKey: ["inventario_itens_all"] });
+    },
+  });
+};
+
 export const useSaveExtractedItems = () => {
   const qc = useQueryClient();
   return useMutation({

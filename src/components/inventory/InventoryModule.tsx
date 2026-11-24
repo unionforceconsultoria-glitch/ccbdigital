@@ -8,14 +8,19 @@ import {
   ArrowLeft,
   Loader2,
   FileDown,
+  Pencil,
+  Trash2,
+  X,
 } from "lucide-react";
 import { useIgrejas } from "@/lib/storage";
 import {
   useInventarios,
   useInventarioDetalhe,
   useCreateInventario,
+  useUpdateInventario,
+  useDeleteInventario,
 } from "@/lib/inventoryStorage";
-import { formatarDataBR } from "@/lib/inventoryUtils";
+import { formatarDataBR, type InventarioRecord } from "@/lib/inventoryUtils";
 import InventoryImportStep from "./InventoryImportStep";
 import InventoryCheckStep from "./InventoryCheckStep";
 import InventoryExtrasAndSummary from "./InventoryExtrasAndSummary";
@@ -29,11 +34,210 @@ const InventoryModule: React.FC = () => {
   const [formError, setFormError] = useState("");
   const [activeInventarioId, setActiveInventarioId] = useState<string | null>(null);
   const [step, setStep] = useState<ActiveStep>("import");
+  const [editingInv, setEditingInv] = useState<InventarioRecord | null>(null);
+  const [editIgrejaId, setEditIgrejaId] = useState("");
+  const [editResponsavel, setEditResponsavel] = useState("");
+  const [editData, setEditData] = useState("");
+  const [editReabrir, setEditReabrir] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [deletingInv, setDeletingInv] = useState<InventarioRecord | null>(null);
+  const [deleteError, setDeleteError] = useState("");
 
   const igrejaFilterId = selectedIgrejaId ? Number(selectedIgrejaId) : undefined;
   const { data: inventarios = [], isLoading: loadingList } = useInventarios(igrejaFilterId);
   const { data: detalhe, isLoading: loadingDetalhe } = useInventarioDetalhe(activeInventarioId);
   const createInventario = useCreateInventario();
+  const updateInventario = useUpdateInventario();
+  const deleteInventario = useDeleteInventario();
+
+  const openEditModal = (inv: InventarioRecord) => {
+    setEditingInv(inv);
+    setEditIgrejaId(String(inv.igreja_id));
+    setEditResponsavel(inv.responsavel);
+    setEditData(inv.data_inventario.slice(0, 10));
+    setEditReabrir(false);
+    setEditError("");
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingInv) return;
+    setEditError("");
+    if (!editIgrejaId) {
+      setEditError("Selecione a igreja.");
+      return;
+    }
+    if (editResponsavel.trim().length < 2) {
+      setEditError("Informe o nome do responsável.");
+      return;
+    }
+    if (!editData) {
+      setEditError("Informe a data do inventário.");
+      return;
+    }
+    const igreja = igrejas.find((i) => i.id === Number(editIgrejaId));
+    if (!igreja) return;
+
+    try {
+      await updateInventario.mutateAsync({
+        id: editingInv.id,
+        igreja_id: igreja.id,
+        igreja_nome: igreja.nome,
+        responsavel: editResponsavel.trim(),
+        data_inventario: editData,
+        status: editReabrir ? "em_andamento" : undefined,
+      });
+      setEditingInv(null);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Erro ao salvar alterações.");
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingInv) return;
+    setDeleteError("");
+    try {
+      await deleteInventario.mutateAsync(deletingInv.id);
+      if (activeInventarioId === deletingInv.id) {
+        setActiveInventarioId(null);
+      }
+      setDeletingInv(null);
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Erro ao excluir inventário.");
+    }
+  };
+
+  const modals = (
+    <>
+      {editingInv && (
+        <div className="fixed inset-0 z-50 bg-foreground/50 flex items-center justify-center p-4">
+          <form
+            onSubmit={handleSaveEdit}
+            className="bg-card rounded-2xl card-shadow w-full max-w-md p-5 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-primary">Editar Inventário</h3>
+              <button
+                type="button"
+                onClick={() => setEditingInv(null)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground"
+                aria-label="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">Igreja</label>
+              <div className="relative">
+                <select
+                  value={editIgrejaId}
+                  onChange={(e) => setEditIgrejaId(e.target.value)}
+                  className="w-full touch-target px-3.5 rounded-xl bg-secondary text-sm appearance-none"
+                >
+                  {igrejas.map((i) => (
+                    <option key={i.id} value={i.id}>
+                      {i.nome}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-4 h-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">Responsável</label>
+              <input
+                type="text"
+                value={editResponsavel}
+                onChange={(e) => setEditResponsavel(e.target.value)}
+                className="w-full touch-target px-3.5 rounded-xl bg-secondary text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-foreground mb-1.5">Data do inventário</label>
+              <input
+                type="date"
+                value={editData}
+                onChange={(e) => setEditData(e.target.value)}
+                className="w-full touch-target px-3.5 rounded-xl bg-secondary text-sm"
+              />
+            </div>
+
+            {editingInv.status === "concluido" && (
+              <label className="flex items-center gap-2 text-xs text-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={editReabrir}
+                  onChange={(e) => setEditReabrir(e.target.checked)}
+                  className="rounded"
+                />
+                Reabrir inventário como &ldquo;Em andamento&rdquo; para continuar editando
+              </label>
+            )}
+
+            {editError && <p className="text-destructive text-xs font-medium">{editError}</p>}
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditingInv(null)}
+                className="px-4 py-2.5 rounded-xl bg-secondary text-foreground text-xs font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={updateInventario.isPending}
+                className="px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {updateInventario.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Salvar alterações
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {deletingInv && (
+        <div className="fixed inset-0 z-50 bg-foreground/50 flex items-center justify-center p-4">
+          <div className="bg-card rounded-2xl card-shadow w-full max-w-md p-5 space-y-4">
+            <h3 className="text-base font-bold text-destructive">Excluir Inventário</h3>
+            <p className="text-sm text-foreground">
+              Deseja realmente excluir o inventário de{" "}
+              <strong>{deletingInv.igreja_nome}</strong> ({formatarDataBR(deletingInv.data_inventario)})?
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Todos os itens conferidos e bens extras deste inventário serão removidos permanentemente.
+            </p>
+            {deleteError && <p className="text-destructive text-xs font-medium">{deleteError}</p>}
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setDeletingInv(null);
+                  setDeleteError("");
+                }}
+                className="px-4 py-2.5 rounded-xl bg-secondary text-foreground text-xs font-bold"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deleteInventario.isPending}
+                onClick={handleConfirmDelete}
+                className="px-4 py-2.5 rounded-xl bg-destructive text-destructive-foreground text-xs font-bold flex items-center gap-1.5 disabled:opacity-60"
+              >
+                {deleteInventario.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Excluir definitivamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   const handleStartNew = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,15 +304,35 @@ const InventoryModule: React.FC = () => {
               {formatarDataBR(inventario.data_inventario)} · {inventario.responsavel}
             </p>
           </div>
-          <span
-            className={`text-[11px] font-bold px-2.5 py-1 rounded-full shrink-0 ${
-              inventario.status === "concluido"
-                ? "bg-success/15 text-success"
-                : "bg-secondary text-foreground"
-            }`}
-          >
-            {inventario.status === "concluido" ? "Concluído" : "Em andamento"}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span
+              className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${
+                inventario.status === "concluido"
+                  ? "bg-success/15 text-success"
+                  : "bg-secondary text-foreground"
+              }`}
+            >
+              {inventario.status === "concluido" ? "Concluído" : "Em andamento"}
+            </span>
+            <button
+              type="button"
+              onClick={() => openEditModal(inventario)}
+              className="p-2 rounded-lg bg-secondary text-foreground hover:bg-primary hover:text-primary-foreground transition-colors"
+              title="Editar dados do inventário"
+              aria-label="Editar inventário"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setDeletingInv(inventario)}
+              className="p-2 rounded-lg bg-secondary text-destructive hover:bg-destructive hover:text-destructive-foreground transition-colors"
+              title="Excluir inventário"
+              aria-label="Excluir inventário"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Indicador de etapas */}
@@ -173,6 +397,7 @@ const InventoryModule: React.FC = () => {
             onBackToCheck={() => setStep("check")}
           />
         )}
+        {modals}
       </div>
     );
   }
@@ -295,7 +520,7 @@ const InventoryModule: React.FC = () => {
                     <span className="tabular-nums">
                       Conferidos: <strong className="text-foreground">{conf}/{total}</strong>
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       {inv.relatorio_final_url && (
                         <a
                           href={inv.relatorio_final_url}
@@ -309,10 +534,28 @@ const InventoryModule: React.FC = () => {
                       )}
                       <button
                         type="button"
+                        onClick={() => openEditModal(inv)}
+                        className="p-1.5 rounded-lg bg-card text-foreground border border-border hover:bg-primary hover:text-primary-foreground transition-colors"
+                        title="Editar inventário"
+                        aria-label={`Editar inventário de ${inv.igreja_nome}`}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeletingInv(inv)}
+                        className="p-1.5 rounded-lg bg-card text-destructive border border-border hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        title="Excluir inventário"
+                        aria-label={`Excluir inventário de ${inv.igreja_nome}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => openExisting(inv.id, total > 0, isDone)}
                         className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-bold"
                       >
-                        {isDone ? "ABRIR" : "CONTINUAR"}
+                        {isDone ? "EDITAR / ABRIR" : "CONTINUAR"}
                       </button>
                     </div>
                   </div>
@@ -322,6 +565,7 @@ const InventoryModule: React.FC = () => {
           </div>
         )}
       </div>
+      {modals}
     </div>
   );
 };
