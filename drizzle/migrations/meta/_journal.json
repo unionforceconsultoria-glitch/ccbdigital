@@ -15,6 +15,13 @@
       "when": 1795545790695,
       "tag": "0001_create_inventario_patrimonial_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795548087027,
+      "tag": "0002_allow_inventarios_pdf_storage_upload",
+      "breakpoints": true
     }
   ]
 }
