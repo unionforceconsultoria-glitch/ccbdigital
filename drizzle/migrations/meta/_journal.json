@@ -8,6 +8,13 @@
       "when": 1795284847497,
       "tag": "0000_open_documentos_admin_writes",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795545790695,
+      "tag": "0001_create_inventario_patrimonial_tables",
+      "breakpoints": true
     }
   ]
 }

@@ -125,6 +125,204 @@ export type Database = {
         }
         Relationships: []
       }
+      inventario_bens_extras: {
+        Row: {
+          codigo_patrimonial: string | null
+          created_at: string
+          descricao: string
+          id: string
+          inventario_id: string
+          localizacao: string | null
+          observacoes: string | null
+          quantidade: number
+        }
+        Insert: {
+          codigo_patrimonial?: string | null
+          created_at?: string
+          descricao: string
+          id?: string
+          inventario_id: string
+          localizacao?: string | null
+          observacoes?: string | null
+          quantidade?: number
+        }
+        Update: {
+          codigo_patrimonial?: string | null
+          created_at?: string
+          descricao?: string
+          id?: string
+          inventario_id?: string
+          localizacao?: string | null
+          observacoes?: string | null
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_bens_extras_inventario_id_fkey"
+            columns: ["inventario_id"]
+            isOneToOne: false
+            referencedRelation: "inventarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventario_historico_alteracoes: {
+        Row: {
+          acao: string
+          autor: string | null
+          created_at: string
+          detalhes: string | null
+          id: string
+          inventario_id: string
+        }
+        Insert: {
+          acao: string
+          autor?: string | null
+          created_at?: string
+          detalhes?: string | null
+          id?: string
+          inventario_id: string
+        }
+        Update: {
+          acao?: string
+          autor?: string | null
+          created_at?: string
+          detalhes?: string | null
+          id?: string
+          inventario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_historico_alteracoes_inventario_id_fkey"
+            columns: ["inventario_id"]
+            isOneToOne: false
+            referencedRelation: "inventarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventario_itens: {
+        Row: {
+          categoria: string
+          codigo_patrimonial: string | null
+          conferido_em: string | null
+          created_at: string
+          descricao: string
+          grupo_chave: string
+          id: string
+          inventario_id: string
+          localizacao: string | null
+          metodo_conferencia: string | null
+          observacoes: string | null
+          quantidade_encontrada: number | null
+          quantidade_esperada: number
+          status_conferencia: string
+          status_etiqueta: string
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string
+          codigo_patrimonial?: string | null
+          conferido_em?: string | null
+          created_at?: string
+          descricao: string
+          grupo_chave: string
+          id?: string
+          inventario_id: string
+          localizacao?: string | null
+          metodo_conferencia?: string | null
+          observacoes?: string | null
+          quantidade_encontrada?: number | null
+          quantidade_esperada?: number
+          status_conferencia?: string
+          status_etiqueta?: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string
+          codigo_patrimonial?: string | null
+          conferido_em?: string | null
+          created_at?: string
+          descricao?: string
+          grupo_chave?: string
+          id?: string
+          inventario_id?: string
+          localizacao?: string | null
+          metodo_conferencia?: string | null
+          observacoes?: string | null
+          quantidade_encontrada?: number | null
+          quantidade_esperada?: number
+          status_conferencia?: string
+          status_etiqueta?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_itens_inventario_id_fkey"
+            columns: ["inventario_id"]
+            isOneToOne: false
+            referencedRelation: "inventarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventarios: {
+        Row: {
+          arquivado_documentos: boolean
+          created_at: string
+          dados_extraidos_json: Json
+          data_inventario: string
+          envio_documento_id: string | null
+          id: string
+          igreja_id: number
+          igreja_nome: string
+          pdf_original_nome: string | null
+          pdf_original_url: string | null
+          relatorio_final_url: string | null
+          responsavel: string
+          resumo_json: Json
+          status: string
+          tipo_procedimento: string
+          updated_at: string
+        }
+        Insert: {
+          arquivado_documentos?: boolean
+          created_at?: string
+          dados_extraidos_json?: Json
+          data_inventario?: string
+          envio_documento_id?: string | null
+          id?: string
+          igreja_id: number
+          igreja_nome: string
+          pdf_original_nome?: string | null
+          pdf_original_url?: string | null
+          relatorio_final_url?: string | null
+          responsavel: string
+          resumo_json?: Json
+          status?: string
+          tipo_procedimento?: string
+          updated_at?: string
+        }
+        Update: {
+          arquivado_documentos?: boolean
+          created_at?: string
+          dados_extraidos_json?: Json
+          data_inventario?: string
+          envio_documento_id?: string | null
+          id?: string
+          igreja_id?: number
+          igreja_nome?: string
+          pdf_original_nome?: string | null
+          pdf_original_url?: string | null
+          relatorio_final_url?: string | null
+          responsavel?: string
+          resumo_json?: Json
+          status?: string
+          tipo_procedimento?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

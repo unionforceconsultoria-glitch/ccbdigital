@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { LogOut, LayoutDashboard, Printer, BarChart3, FolderUp, FolderOpen, Church, MessageCircle } from "lucide-react";
+import { LogOut, LayoutDashboard, Printer, BarChart3, FolderUp, FolderOpen, Church, MessageCircle, ClipboardList } from "lucide-react";
 import AdminDashboard from "@/components/admin/AdminDashboard";
 import AdminPrinting from "@/components/admin/AdminPrinting";
 import AdminDistribution from "@/components/admin/AdminDistribution";
@@ -10,6 +10,7 @@ import AdminDocuments from "@/components/admin/AdminDocuments";
 import AdminFileManager from "@/components/admin/AdminFileManager";
 import AdminIgrejas from "@/components/admin/AdminIgrejas";
 import AdminCobranca from "@/components/admin/AdminCobranca";
+import AdminInventario from "@/components/admin/AdminInventario";
 
 const tabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -19,6 +20,7 @@ const tabs = [
   { id: "documentos", label: "Documentos", icon: FolderUp },
   { id: "igrejas", label: "Igrejas", icon: Church },
   { id: "cobranca", label: "Cobrança", icon: MessageCircle },
+  { id: "inventario", label: "Inventário", icon: ClipboardList },
 ] as const;
 
 type TabId = (typeof tabs)[number]["id"];
@@ -89,6 +91,7 @@ const AdminArea: React.FC = () => {
         {activeTab === "documentos" && <AdminDocuments />}
         {activeTab === "igrejas" && <AdminIgrejas />}
         {activeTab === "cobranca" && <AdminCobranca />}
+        {activeTab === "inventario" && <AdminInventario />}
       </div>
     </div>
   );

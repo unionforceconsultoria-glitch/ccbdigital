@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { tiposFormulario } from "@/data/churches";
 import { useAddEnvio, useDocumentosAdmin, useIgrejas } from "@/lib/storage";
-import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check, HelpCircle, Share2, Copy } from "lucide-react";
+import { Camera, Upload, FileText, CheckCircle2, Download, ChevronDown, Shield, Loader2, Check, HelpCircle, Share2, Copy, ClipboardList } from "lucide-react";
 import { ScanLine } from "lucide-react";
 import ProtocolStamp from "@/components/ProtocolStamp";
 import TutorialModal from "@/components/TutorialModal";
 import DocumentScanner from "@/components/DocumentScanner";
+import InventoryModule from "@/components/inventory/InventoryModule";
 import { convertImageToScannedPdf } from "@/lib/scanToPdf";
 
 // Garante um nome de arquivo válido em qualquer plataforma (iOS às vezes envia "image.heic" ou sem nome)
@@ -143,6 +144,7 @@ const UserArea: React.FC = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [mainTab, setMainTab] = useState<"documentos" | "inventario">("documentos");
   const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
 
@@ -328,7 +330,41 @@ const UserArea: React.FC = () => {
         </div>
       </div>
 
+      {/* Abas principais: DOCUMENTOS e INVENTÁRIO */}
+      <div className="bg-card border-b border-border">
+        <div className="max-w-[480px] mx-auto grid grid-cols-2">
+          <button
+            type="button"
+            onClick={() => setMainTab("documentos")}
+            className={`py-3.5 px-4 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 border-b-[3px] transition-colors ${
+              mainTab === "documentos"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            DOCUMENTOS
+          </button>
+          <button
+            type="button"
+            onClick={() => setMainTab("inventario")}
+            className={`py-3.5 px-4 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 border-b-[3px] transition-colors ${
+              mainTab === "inventario"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <ClipboardList className="w-4 h-4" />
+            INVENTÁRIO
+          </button>
+        </div>
+      </div>
+
       <div className="max-w-[480px] mx-auto p-4 space-y-4">
+        {mainTab === "inventario" ? (
+          <InventoryModule />
+        ) : (
+        <>
         <AnimatePresence mode="wait">
           {protocolo ? (
             <motion.div
@@ -730,6 +766,8 @@ const UserArea: React.FC = () => {
                 ))}
             </div>
           </div>
+        </>
+        )}
       </div>
     </div>
   );
