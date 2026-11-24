@@ -4,6 +4,7 @@ import {
   classificarResultados,
   calcularResumoInventario,
   normalizarChaveGrupo,
+  encontrarItemPorCodigo,
   type InventarioItem,
   type BemExtra,
 } from "@/lib/inventoryUtils";
@@ -105,5 +106,19 @@ describe("Inventário Patrimonial — regras de agrupamento e classificação", 
     expect(resumo.sem_etiqueta).toBe(1);
     expect(resumo.etiquetas_danificadas).toBe(1);
     expect(resumo.bens_extras).toBe(1);
+  });
+
+  it("reconhece o código da etiqueta CCB (ex.: '22-4471 / 000001') com ou sem pontuação/espaços ou pelo sequencial", () => {
+    const itens = [
+      makeItem({ id: "1", codigo_patrimonial: "22-4471 / 000001", descricao: "56 - EXTINTOR PÓ QUÍMICO SECO 4KG" }),
+      makeItem({ id: "2", codigo_patrimonial: "22-4471 / 000002", descricao: "4 - CADEIRA MADEIRA ASSENTO ESTOFADO" }),
+    ];
+
+    expect(encontrarItemPorCodigo(itens, "22-4471 / 000001")?.id).toBe("1");
+    expect(encontrarItemPorCodigo(itens, "22-4471/000001")?.id).toBe("1");
+    expect(encontrarItemPorCodigo(itens, "224471000001")?.id).toBe("1");
+    expect(encontrarItemPorCodigo(itens, "000002")?.id).toBe("2");
+    expect(encontrarItemPorCodigo(itens, "2")?.id).toBe("2");
+    expect(encontrarItemPorCodigo(itens, "999999")).toBeUndefined();
   });
 });

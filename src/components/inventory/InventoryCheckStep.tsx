@@ -19,7 +19,8 @@ import {
   type StatusEtiqueta,
   ETIQUETA_LABELS,
   agruparItensParaConferencia,
-  limparCodigo,
+  encontrarItemPorCodigo,
+  somenteAlfanumerico,
 } from "@/lib/inventoryUtils";
 import { useUpdateGrupoQuantidade, useUpdateInventarioItem } from "@/lib/inventoryStorage";
 import BarcodeScannerModal from "./BarcodeScannerModal";
@@ -69,18 +70,19 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
   const itensFiltrados = useMemo(() => {
     const q = busca.trim().toLowerCase();
     if (!q) return itens;
+    const qAlnum = somenteAlfanumerico(q);
     return itens.filter(
       (i) =>
         i.descricao.toLowerCase().includes(q) ||
         (i.codigo_patrimonial || "").toLowerCase().includes(q) ||
+        (qAlnum.length > 0 && somenteAlfanumerico(i.codigo_patrimonial || "").includes(qAlnum)) ||
         i.categoria.toLowerCase().includes(q),
     );
   }, [itens, busca]);
 
   const handleBarcodeRead = (rawCode: string) => {
     setShowCamera(false);
-    const norm = limparCodigo(rawCode);
-    const match = itens.find((i) => i.codigo_patrimonial && limparCodigo(i.codigo_patrimonial) === norm);
+    const match = encontrarItemPorCodigo(itens, rawCode);
     if (!match) {
       setScanFeedback({ type: "not_found", code: rawCode });
       return;

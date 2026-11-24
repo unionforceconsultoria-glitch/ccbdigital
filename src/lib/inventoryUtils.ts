@@ -239,3 +239,41 @@ export function formatarDataBR(dateStr: string): string {
 export function limparCodigo(codigo: string): string {
   return codigo.trim().replace(/\s+/g, "").toLowerCase();
 }
+
+export function somenteAlfanumerico(codigo: string): string {
+  return codigo.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+
+/**
+ * Localiza um item pelo código da etiqueta patrimonial.
+ * Aceita o formato oficial CCB ("22-4471 / 000001"), versões sem espaços/pontuação ("224471000001", "22-4471/000001")
+ * e, quando inequívoco, apenas o sequencial final ("000001" ou "1").
+ */
+export function encontrarItemPorCodigo(
+  itens: InventarioItem[],
+  rawCode: string,
+): InventarioItem | undefined {
+  const norm = limparCodigo(rawCode);
+  const alnum = somenteAlfanumerico(rawCode);
+  if (!norm && !alnum) return undefined;
+
+  const exact = itens.find((i) => i.codigo_patrimonial && limparCodigo(i.codigo_patrimonial) === norm);
+  if (exact) return exact;
+
+  const byAlnum = itens.find(
+    (i) => i.codigo_patrimonial && somenteAlfanumerico(i.codigo_patrimonial) === alnum,
+  );
+  if (byAlnum) return byAlnum;
+
+  // Tenta casar pelo número sequencial após "/" (ex.: "000001" ou "1" em "22-4471 / 000001") se único
+  const digitsNoZeros = alnum.replace(/^0+/, "");
+  if (!digitsNoZeros) return undefined;
+  const suffixMatches = itens.filter((i) => {
+    if (!i.codigo_patrimonial) return false;
+    const parts = i.codigo_patrimonial.split("/");
+    if (parts.length < 2) return false;
+    const suffix = somenteAlfanumerico(parts[parts.length - 1] || "");
+    return suffix === alnum || suffix.replace(/^0+/, "") === digitsNoZeros;
+  });
+  return suffixMatches.length === 1 ? suffixMatches[0] : undefined;
+}

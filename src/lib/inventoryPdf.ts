@@ -55,12 +55,11 @@ export function gerarRelatorioIndividualPdf(
   const doc = new jsPDF();
   const resumo = calcularResumoInventario(itens, bensExtras);
   const cl = classificarResultados(itens, bensExtras);
-  const tipoLabel = inventario.tipo_procedimento === "anual" ? "Anual" : "Semestral";
 
   addHeader(
     doc,
     `Relatório Individual — ${inventario.igreja_nome}`,
-    `Data: ${formatarDataBR(inventario.data_inventario)} | Procedimento: ${tipoLabel} | Responsável: ${inventario.responsavel}`,
+    `Data: ${formatarDataBR(inventario.data_inventario)} | Responsável: ${inventario.responsavel}`,
   );
 
   autoTable(doc, {
@@ -201,7 +200,6 @@ export function gerarRelatorioGeralPdf(
     return [
       formatarDataBR(inv.data_inventario),
       inv.igreja_nome,
-      inv.tipo_procedimento === "anual" ? "Anual" : "Semestral",
       r.encontrados,
       r.nao_encontrados,
       r.sem_etiqueta,
@@ -213,8 +211,8 @@ export function gerarRelatorioGeralPdf(
 
   autoTable(doc, {
     startY: 43,
-    head: [["Data", "Igreja", "Tipo", "Encontr.", "Faltantes", "Sem Etiq.", "Diverg.", "Extras", "Situação"]],
-    body: rows.length ? rows : [["—", "Nenhum inventário registrado", "—", 0, 0, 0, 0, 0, "—"]],
+    head: [["Data", "Igreja", "Encontr.", "Faltantes", "Sem Etiq.", "Diverg.", "Extras", "Situação"]],
+    body: rows.length ? rows : [["—", "Nenhum inventário registrado", 0, 0, 0, 0, 0, "—"]],
     theme: "grid",
     headStyles: { fillColor: [45, 50, 58], textColor: 255, fontSize: 8 },
     styles: { fontSize: 8, cellPadding: 2 },

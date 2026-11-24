@@ -15,7 +15,7 @@ import {
   useInventarioDetalhe,
   useCreateInventario,
 } from "@/lib/inventoryStorage";
-import { type TipoProcedimento, formatarDataBR } from "@/lib/inventoryUtils";
+import { formatarDataBR } from "@/lib/inventoryUtils";
 import InventoryImportStep from "./InventoryImportStep";
 import InventoryCheckStep from "./InventoryCheckStep";
 import InventoryExtrasAndSummary from "./InventoryExtrasAndSummary";
@@ -26,7 +26,6 @@ const InventoryModule: React.FC = () => {
   const { data: igrejas = [] } = useIgrejas();
   const [selectedIgrejaId, setSelectedIgrejaId] = useState("");
   const [responsavel, setResponsavel] = useState("");
-  const [tipoProcedimento, setTipoProcedimento] = useState<TipoProcedimento>("semestral");
   const [formError, setFormError] = useState("");
   const [activeInventarioId, setActiveInventarioId] = useState<string | null>(null);
   const [step, setStep] = useState<ActiveStep>("import");
@@ -55,7 +54,7 @@ const InventoryModule: React.FC = () => {
         igreja_id: igreja.id,
         igreja_nome: igreja.nome,
         responsavel: responsavel.trim(),
-        tipo_procedimento: tipoProcedimento,
+        tipo_procedimento: "anual",
       });
       setActiveInventarioId(novo.id);
       setStep("import");
@@ -98,7 +97,7 @@ const InventoryModule: React.FC = () => {
             </button>
             <h2 className="font-bold text-primary text-base truncate">{inventario.igreja_nome}</h2>
             <p className="text-xs text-muted-foreground">
-              {inventario.tipo_procedimento === "anual" ? "Anual" : "Semestral"} · {formatarDataBR(inventario.data_inventario)} · {inventario.responsavel}
+              {formatarDataBR(inventario.data_inventario)} · {inventario.responsavel}
             </p>
           </div>
           <span
@@ -222,26 +221,6 @@ const InventoryModule: React.FC = () => {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-semibold text-foreground mb-2">Tipo de Procedimento</label>
-          <div className="grid grid-cols-2 gap-2">
-            {(["semestral", "anual"] as TipoProcedimento[]).map((tipo) => (
-              <button
-                key={tipo}
-                type="button"
-                onClick={() => setTipoProcedimento(tipo)}
-                className={`h-11 rounded-xl text-sm font-bold transition-all ${
-                  tipoProcedimento === tipo
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-foreground border border-border"
-                }`}
-              >
-                {tipo === "semestral" ? "Semestral" : "Anual"}
-              </button>
-            ))}
-          </div>
-        </div>
-
         {formError && <p className="text-destructive text-sm font-medium">{formError}</p>}
 
         <button
@@ -299,7 +278,7 @@ const InventoryModule: React.FC = () => {
                     <div className="min-w-0">
                       <p className="font-bold text-sm text-foreground truncate">{inv.igreja_nome}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatarDataBR(inv.data_inventario)} · {inv.tipo_procedimento === "anual" ? "Anual" : "Semestral"} · {inv.responsavel}
+                        {formatarDataBR(inv.data_inventario)} · {inv.responsavel}
                       </p>
                     </div>
                     <span
