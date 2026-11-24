@@ -82,6 +82,7 @@ export interface GrupoInventario {
   grupo_chave: string;
   descricao: string;
   categoria: string;
+  dependencias: string | null;
   itens: InventarioItem[];
   quantidade_esperada: number;
   quantidade_encontrada: number;
@@ -114,20 +115,114 @@ export const STATUS_CONFERENCIA_LABELS: Record<StatusConferencia, string> = {
   divergencia: "Divergência",
 };
 
+function stripAccentsLower(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+interface BancoMetragemInfo {
+  chave: string;
+  titulo: string | null;
+}
+
+/**
+ * Identifica bancos / genuflexórios e extrai a metragem (ex.: 2,34 m, 1,50 m).
+ * Bancos e genuflexórios com a mesma metragem são agrupados juntos, independentemente
+ * de variações na descrição ou da dependência/OBS; metragens diferentes ficam separadas.
+ */
+function analisarBancoOuGenuflexorio(descricao: string): BancoMetragemInfo | null {
+  const norm = stripAccentsLower(descricao);
+  if (!/\b(bancos?|genuflexorios?)\b/.test(norm)) return null;
+
+  const metragemMatch = norm.match(/(\d+(?:[.,]\d{1,3})?)\s*m(?:ts?|etros?)?\b/);
+  if (metragemMatch) {
+    const rawNum = metragemMatch[1]!.replace(",", ".");
+    const parsed = Number.parseFloat(rawNum);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      const decimalsPart = rawNum.split(".")[1] || "";
+      const useThreeDecimals = decimalsPart.length === 3 && !decimalsPart.endsWith("0");
+      const canonical = useThreeDecimals ? parsed.toFixed(3) : parsed.toFixed(2);
+      const display = canonical.replace(".", ",");
+      return {
+        chave: `banco_genuflexorio::${canonical}m`,
+        titulo: `Banco de madeira / Genuflexório — ${display} m`,
+      };
+    }
+  }
+
+  if (/\binfantil\b/.test(norm)) {
+    return { chave: "banco_genuflexorio::infantil", titulo: null };
+  }
+
+  return { chave: "banco_genuflexorio::sem_metragem", titulo: null };
+}
+
+/**
+ * Extrai a dependência efetiva do item, priorizando observações de ambiente (ex.: "OBS: SALINHA DE ORAÇÃO")
+ * quando presentes na descrição e usando a coluna localização/dependência como padrão.
+ */
+export function extrairDependenciaItem(descricao: string, localizacao?: string | null): string | null {
+  const obsMatch = descricao.match(/\bOBS\s*:\s*([^.;\n]+)/i);
+  if (obsMatch?.[1]?.trim()) {
+    return obsMatch[1].trim();
+  }
+  const loc = localizacao?.trim();
+  return loc ? loc : null;
+}
+
+/**
+ * Resume as dependências de um grupo (ex.: "SALAO DE CULTO (6) · SALINHA DE ORAÇÃO (9)").
+ */
+export function formatarDependenciasGrupo(
+  itens: Array<{ descricao: string; localizacao?: string | null; quantidade?: number; quantidade_esperada?: number }>,
+): string | null {
+  const counts = new Map<string, { label: string; total: number }>();
+  for (const item of itens) {
+    const dep = extrairDependenciaItem(item.descricao, item.localizacao);
+    if (!dep) continue;
+    const key = stripAccentsLower(dep).replace(/[^a-z0-9]+/g, " ").trim();
+    if (!key) continue;
+    const qty = Math.max(1, Number(item.quantidade_esperada ?? item.quantidade ?? 1) || 1);
+    const existing = counts.get(key);
+    if (existing) {
+      existing.total += qty;
+    } else {
+      counts.set(key, { label: dep, total: qty });
+    }
+  }
+  if (counts.size === 0) return null;
+  const entries = Array.from(counts.values()).sort((a, b) => b.total - a.total);
+  if (entries.length === 1) return entries[0]!.label;
+  return entries.map((e) => `${e.label} (${e.total})`).join(" · ");
+}
+
+/**
+ * Retorna o título de exibição do grupo (padronizado para bancos/genuflexórios com metragem).
+ */
+export function obterDescricaoGrupo(descricao: string): string {
+  const bancoInfo = analisarBancoOuGenuflexorio(descricao);
+  if (bancoInfo?.titulo) return bancoInfo.titulo;
+  return descricao.trim();
+}
+
 /**
  * Normaliza descrição + categoria para agrupar bens idênticos (ex.: 80 bancos de madeira)
  * sem misturar bens com descrições ou categorias diferentes.
+ * Para bancos e genuflexórios, agrupa por metragem independente de dependência/OBS.
  */
 export function normalizarChaveGrupo(descricao: string, categoria = "Geral"): string {
+  const bancoInfo = analisarBancoOuGenuflexorio(descricao);
+  if (bancoInfo) return bancoInfo.chave;
+
   const clean = (s: string) =>
-    s
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
+    stripAccentsLower(s)
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
   return `${clean(categoria || "geral")}::${clean(descricao)}`;
 }
+
 
 /**
  * Agrupa itens idênticos preservando todos os códigos patrimoniais individuais.
@@ -135,7 +230,7 @@ export function normalizarChaveGrupo(descricao: string, categoria = "Geral"): st
 export function agruparItensParaConferencia(itens: InventarioItem[]): GrupoInventario[] {
   const map = new Map<string, InventarioItem[]>();
   for (const item of itens) {
-    const key = item.grupo_chave || normalizarChaveGrupo(item.descricao, item.categoria);
+    const key = normalizarChaveGrupo(item.descricao, item.categoria);
     const list = map.get(key) || [];
     list.push(item);
     map.set(key, list);
@@ -156,8 +251,9 @@ export function agruparItensParaConferencia(itens: InventarioItem[]): GrupoInven
 
     grupos.push({
       grupo_chave,
-      descricao: first.descricao,
+      descricao: obterDescricaoGrupo(first.descricao),
       categoria: first.categoria || "Geral",
+      dependencias: formatarDependenciasGrupo(list),
       itens: list,
       quantidade_esperada,
       quantidade_encontrada,

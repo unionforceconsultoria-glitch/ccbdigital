@@ -4,6 +4,8 @@ import {
   type ExtractedInventoryItem,
   type InventarioRecord,
   normalizarChaveGrupo,
+  obterDescricaoGrupo,
+  formatarDependenciasGrupo,
 } from "@/lib/inventoryUtils";
 import { uploadInventoryPdf, extrairItensDoPdf, useSaveExtractedItems } from "@/lib/inventoryStorage";
 
@@ -113,7 +115,7 @@ const InventoryImportStep: React.FC<InventoryImportStepProps> = ({ inventario, i
 
   // Prévia de agrupamento automático
   const gruposPreview = React.useMemo(() => {
-    const map = new Map<string, { descricao: string; categoria: string; total: number; registros: number }>();
+    const map = new Map<string, { descricao: string; categoria: string; total: number; itens: ExtractedInventoryItem[] }>();
     for (const item of itens) {
       if (!item.descricao.trim()) continue;
       const key = normalizarChaveGrupo(item.descricao, item.categoria);
@@ -121,17 +123,24 @@ const InventoryImportStep: React.FC<InventoryImportStepProps> = ({ inventario, i
       const qty = Math.max(1, Number(item.quantidade) || 1);
       if (existing) {
         existing.total += qty;
-        existing.registros += 1;
+        existing.itens.push(item);
       } else {
         map.set(key, {
-          descricao: item.descricao.trim(),
+          descricao: obterDescricaoGrupo(item.descricao),
           categoria: item.categoria || "Geral",
           total: qty,
-          registros: 1,
+          itens: [item],
         });
       }
     }
-    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+    return Array.from(map.values())
+      .map((g) => ({
+        descricao: g.descricao,
+        categoria: g.categoria,
+        total: g.total,
+        dependencias: formatarDependenciasGrupo(g.itens),
+      }))
+      .sort((a, b) => b.total - a.total);
   }, [itens]);
 
   return (
@@ -200,7 +209,10 @@ const InventoryImportStep: React.FC<InventoryImportStepProps> = ({ inventario, i
               <div key={idx} className="flex items-center justify-between bg-secondary/70 rounded-xl px-3 py-2 text-xs">
                 <div className="min-w-0 pr-2">
                   <p className="font-semibold text-foreground truncate">{g.descricao}</p>
-                  <p className="text-muted-foreground">{g.categoria}</p>
+                  <p className="text-muted-foreground truncate">
+                    {g.categoria}
+                    {g.dependencias ? ` · Dep.: ${g.dependencias}` : ""}
+                  </p>
                 </div>
                 <span className="font-bold text-primary shrink-0 tabular-nums">
                   Qtd esperada: {g.total}

@@ -235,6 +235,11 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
                     <p className="text-xs text-muted-foreground">
                       {g.categoria} · Qtd cadastrada: <strong className="text-foreground tabular-nums">{g.quantidade_esperada}</strong>
                     </p>
+                    {g.dependencias && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Dependência: {g.dependencias}
+                      </p>
+                    )}
                   </div>
                   {g.todos_conferidos && (
                     <span

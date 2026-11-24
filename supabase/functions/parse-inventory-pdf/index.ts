@@ -16,7 +16,7 @@ Formato mais comum — "Relatório de Bens Imobilizado" do sistema oficial da CC
 - Coluna à esquerda "Código" (ex.: "22-4471 / 000001"): este é SEMPRE o "codigo_patrimonial" usado na etiqueta física do bem. O primeiro número ("22-4471") é o código da igreja e o número após a barra ("000001") é o código do item dentro dessa igreja. Preserve exatamente como aparece na coluna "Código".
 - NÃO confunda o "codigo_patrimonial" com o número prefixo do produto dentro da coluna "Nome" (ex.: "56 - ", "4 - ", "1 - ", "11.006 - "), nem com "Localidade" ("BR 22-4471"), "Conta" ("1101") ou "Nº Documento".
 - Coluna "Nome": use como "descricao" completa do bem.
-- Coluna "Dependência" (ex.: "SALAO DE CULTO", "SALA DE REUNIÃO", "DORMITÓRIO"): use como "localizacao". Se "Dependência" estiver vazia mas a descrição tiver "OBS: <ambiente>" (ex.: "OBS: SALINHA DE ORAÇÃO"), use esse ambiente como "localizacao"; caso contrário null.
+- Coluna "Dependência" (ex.: "SALAO DE CULTO", "SALA DE REUNIÃO", "DORMITÓRIO"): use como "localizacao". Se a descrição tiver "OBS: <ambiente>" (ex.: "OBS: SALINHA DE ORAÇÃO"), use esse ambiente como "localizacao" pois indica onde o bem está; caso contrário use a coluna "Dependência" ou null.
 - Extraia TODAS as linhas de bens de TODAS as páginas (inclusive status "Ativo" e "Depreciado"). Ignore apenas cabeçalhos de filtro (Data Posição, Subgrupo, Fornecedor, etc.), rodapés de endereço/CNPJ e a linha final de "Total".
 
 Regras obrigatórias:

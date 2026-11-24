@@ -145,4 +145,57 @@ describe("Inventário Patrimonial — regras de agrupamento e classificação", 
     expect(encontrarItemPorCodigo(itensIgreja4471, "22-4472 / 000001")).toBeUndefined();
     expect(encontrarItemPorCodigo(itensIgreja4471, "22/4472/001")).toBeUndefined();
   });
+
+  it("agrupa bancos e genuflexórios pela metragem ignorando variações de texto e dependência, exibindo observação das dependências", () => {
+    const itens = [
+      makeItem({
+        id: "b1",
+        codigo_patrimonial: "22-4471 / 000004",
+        descricao: "1 - BANCO DE MADEIRA / GENUFLEXÓRIO 1 - BANCO DE MADEIRA 2,34M",
+        localizacao: "SALAO DE CULTO",
+      }),
+      makeItem({
+        id: "b2",
+        codigo_patrimonial: "22-4471 / 000006",
+        descricao: "1 - BANCO DE MADEIRA / GENUFLEXÓRIO 1 - BANCO DE MADEIRA 2,34M OBS: SALINHA DE ORAÇÃO",
+        localizacao: "SALAO DE CULTO",
+      }),
+      makeItem({
+        id: "b3",
+        codigo_patrimonial: "22-4471 / 000050",
+        descricao: "1 - BANCO DE MADEIRA / GENUFLEXÓRIO BANCO DE MADEIRA C/ GENUFLEXÓRIO COM 2,34M",
+        localizacao: "SALAO DE CULTO",
+      }),
+      makeItem({
+        id: "b4",
+        codigo_patrimonial: "22-4471 / 000052",
+        descricao: "1 - BANCO DE MADEIRA / GENUFLEXÓRIO 1 - BANCO DE MADEIRA 1,50 M OBS: SALINHA DE ORAÇÃO",
+        localizacao: "SALINHA DE ORAÇÃO",
+      }),
+      makeItem({
+        id: "b5",
+        codigo_patrimonial: "22-4471 / 000053",
+        descricao: "1 - BANCO DE MADEIRA / GENUFLEXÓRIO 1 - BANCO DE MADEIRA 1,50 M OBS: SALINHA DE ORAÇÃO",
+        localizacao: null,
+      }),
+    ];
+
+    const grupos = agruparItensParaConferencia(itens);
+    expect(grupos).toHaveLength(2);
+
+    const grupo234 = grupos.find((g) => g.descricao.includes("2,34 m"))!;
+    expect(grupo234).toBeDefined();
+    expect(grupo234.quantidade_esperada).toBe(3);
+    expect(grupo234.itens.map((i) => i.codigo_patrimonial)).toEqual([
+      "22-4471 / 000004",
+      "22-4471 / 000006",
+      "22-4471 / 000050",
+    ]);
+    expect(grupo234.dependencias).toBe("SALAO DE CULTO (2) · SALINHA DE ORAÇÃO (1)");
+
+    const grupo150 = grupos.find((g) => g.descricao.includes("1,50 m"))!;
+    expect(grupo150).toBeDefined();
+    expect(grupo150.quantidade_esperada).toBe(2);
+    expect(grupo150.dependencias).toBe("SALINHA DE ORAÇÃO");
+  });
 });
