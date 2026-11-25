@@ -18,6 +18,7 @@ import {
 } from "@/lib/inventoryUtils";
 import { useAddBemExtra, useRemoveBemExtra, useConcluirInventario } from "@/lib/inventoryStorage";
 import { gerarRelatorioIndividualPdf } from "@/lib/inventoryPdf";
+import { playCompletionSound, playConfirmSound } from "@/lib/inventorySounds";
 
 interface InventoryExtrasAndSummaryProps {
   inventario: InventarioRecord;
@@ -65,6 +66,7 @@ const InventoryExtrasAndSummary: React.FC<InventoryExtrasAndSummaryProps> = ({
         observacoes,
         autor: inventario.responsavel,
       });
+      playConfirmSound();
       setDescricao("");
       setQuantidade("1");
       setCodigo("");
@@ -85,6 +87,7 @@ const InventoryExtrasAndSummary: React.FC<InventoryExtrasAndSummaryProps> = ({
         relatorioBlob: blob,
         arquivarEmDocumentos: arquivarDocs,
       });
+      playCompletionSound();
       download();
       setMsg(
         res.arquivado

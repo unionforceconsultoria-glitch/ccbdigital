@@ -9,6 +9,8 @@ import {
   type InventarioItem,
   type BemExtra,
 } from "@/lib/inventoryUtils";
+import { parseCcbReportPages } from "@/lib/inventoryPdfParser";
+import { playCompletionSound, playConfirmSound } from "@/lib/inventorySounds";
 
 function makeItem(overrides: Partial<InventarioItem> & { id: string; descricao: string }): InventarioItem {
   const categoria = overrides.categoria ?? "Mobiliário";
@@ -197,5 +199,59 @@ describe("Inventário Patrimonial — regras de agrupamento e classificação", 
     expect(grupo150).toBeDefined();
     expect(grupo150.quantidade_esperada).toBe(2);
     expect(grupo150.dependencias).toBe("SALINHA DE ORAÇÃO");
+  });
+
+  it("extrai itens localmente do PDF CCB restaurando código da igreja e removendo datas da dependência", () => {
+    const pageTokens = [
+      { str: "BR", x: 65, y: 481 },
+      { str: "22-4471", x: 76, y: 481 },
+      { str: "ódigo", x: 8, y: 434 },
+      { str: "Nome", x: 66, y: 434 },
+      { str: "Fornecedor", x: 257, y: 434 },
+      { str: "Localidade", x: 386, y: 434 },
+      { str: "Conta", x: 436, y: 434 },
+      { str: "Dependência", x: 519, y: 434 },
+      { str: "Dt.", x: 582, y: 434 },
+      { str: "Aquisição", x: 594, y: 434 },
+      // Linha 1 (código com primeiro dígito cortado na margem esquerda)
+      { str: "2-4471", x: 7, y: 422 },
+      { str: "/", x: 31, y: 422 },
+      { str: "000001", x: 36, y: 422 },
+      { str: "56 - EXTINTOR PÓ QUÍMICO SECO 4KG", x: 66, y: 422 },
+      { str: "NENHUM", x: 248, y: 422 },
+      { str: "BR 22-4471", x: 387, y: 422 },
+      { str: "SALAO DE CULTO", x: 519, y: 422 },
+      { str: "05/08/2009", x: 592, y: 422 },
+      // Linha 2 (banco com OBS: SALINHA DE ORAÇÃO)
+      { str: "2-4471", x: 7, y: 405 },
+      { str: "/", x: 31, y: 405 },
+      { str: "000006", x: 36, y: 405 },
+      { str: "1 - BANCO DE MADEIRA 2,34M OBS: SALINHA DE ORAÇÃO", x: 66, y: 405 },
+      { str: "NENHUM", x: 248, y: 405 },
+      { str: "BR 22-4471", x: 387, y: 405 },
+      { str: "SALAO DE CULTO", x: 519, y: 405 },
+    ];
+
+    const itens = parseCcbReportPages([pageTokens]);
+    expect(itens).toHaveLength(2);
+    expect(itens[0]).toEqual({
+      codigo_patrimonial: "22-4471 / 000001",
+      descricao: "56 - EXTINTOR PÓ QUÍMICO SECO 4KG",
+      categoria: "Segurança",
+      localizacao: "SALAO DE CULTO",
+      quantidade: 1,
+    });
+    expect(itens[1]).toEqual({
+      codigo_patrimonial: "22-4471 / 000006",
+      descricao: "1 - BANCO DE MADEIRA 2,34M OBS: SALINHA DE ORAÇÃO",
+      categoria: "Mobiliário",
+      localizacao: "SALINHA DE ORAÇÃO",
+      quantidade: 1,
+    });
+  });
+
+  it("executa os sons de confirmação e conclusão sem erro mesmo em ambiente sem Web Audio", () => {
+    expect(() => playConfirmSound()).not.toThrow();
+    expect(() => playCompletionSound()).not.toThrow();
   });
 });

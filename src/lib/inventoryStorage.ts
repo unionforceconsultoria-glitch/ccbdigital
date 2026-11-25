@@ -337,9 +337,63 @@ export async function syncResumoInventario(inventarioId: string): Promise<void> 
     .eq("id", inventarioId);
 }
 
+type DetalheCache = {
+  inventario: InventarioRecord;
+  itens: InventarioItem[];
+  bensExtras: BemExtra[];
+};
+
+function syncResumoFromCacheInBackground(
+  qc: ReturnType<typeof useQueryClient>,
+  inventarioId: string,
+): void {
+  const cached = qc.getQueryData<DetalheCache>(["inventario_detalhe", inventarioId]);
+  if (cached) {
+    const resumo = calcularResumoInventario(cached.itens, cached.bensExtras);
+    void supabase
+      .from("inventarios")
+      .update({ resumo_json: resumo as unknown as never })
+      .eq("id", inventarioId);
+  } else {
+    void syncResumoInventario(inventarioId);
+  }
+}
+
 export const useUpdateInventarioItem = () => {
   const qc = useQueryClient();
   return useMutation({
+    onMutate: async (input: {
+      itemId: string;
+      inventarioId: string;
+      status_conferencia: StatusConferencia;
+      status_etiqueta: StatusEtiqueta;
+      quantidade_encontrada: number | null;
+      metodo_conferencia: MetodoConferencia;
+      observacoes?: string | null;
+    }) => {
+      const key = ["inventario_detalhe", input.inventarioId];
+      const previous = qc.getQueryData<DetalheCache>(key);
+      const now = new Date().toISOString();
+      if (previous) {
+        qc.setQueryData<DetalheCache>(key, {
+          ...previous,
+          itens: previous.itens.map((it) =>
+            it.id === input.itemId
+              ? {
+                  ...it,
+                  status_conferencia: input.status_conferencia,
+                  status_etiqueta: input.status_etiqueta,
+                  quantidade_encontrada: input.quantidade_encontrada,
+                  metodo_conferencia: input.metodo_conferencia,
+                  observacoes: input.observacoes ?? it.observacoes,
+                  conferido_em: now,
+                }
+              : it,
+          ),
+        });
+      }
+      return { previous, key };
+    },
     mutationFn: async (input: {
       itemId: string;
       inventarioId: string;
@@ -361,19 +415,69 @@ export const useUpdateInventarioItem = () => {
         })
         .eq("id", input.itemId);
       if (error) throw error;
-      await syncResumoInventario(input.inventarioId);
+      syncResumoFromCacheInBackground(qc, input.inventarioId);
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["inventario_detalhe", vars.inventarioId] });
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        qc.setQueryData(ctx.key, ctx.previous);
+      }
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inventarios"] });
       qc.invalidateQueries({ queryKey: ["inventario_itens_all"] });
     },
   });
 };
 
+function calcularDistribuicaoGrupo(
+  itens: InventarioItem[],
+  quantidadeEncontradaTotal: number,
+): Array<{ id: string; quantidade_encontrada: number; status_conferencia: StatusConferencia }> {
+  let restante = Math.max(0, Math.round(quantidadeEncontradaTotal));
+  return itens.map((item, i) => {
+    const esperado = item.quantidade_esperada || 1;
+    const isLast = i === itens.length - 1;
+    const alocado = isLast ? restante : Math.min(esperado, restante);
+    restante = Math.max(0, restante - alocado);
+    const status: StatusConferencia =
+      alocado === 0 ? "nao_encontrado" : alocado === esperado ? "encontrado" : "divergencia";
+    return { id: item.id, quantidade_encontrada: alocado, status_conferencia: status };
+  });
+}
+
 export const useUpdateGrupoQuantidade = () => {
   const qc = useQueryClient();
   return useMutation({
+    onMutate: async (input: {
+      inventarioId: string;
+      itens: InventarioItem[];
+      quantidadeEncontradaTotal: number;
+      statusEtiqueta?: StatusEtiqueta;
+    }) => {
+      const key = ["inventario_detalhe", input.inventarioId];
+      const previous = qc.getQueryData<DetalheCache>(key);
+      const now = new Date().toISOString();
+      const dist = calcularDistribuicaoGrupo(input.itens, input.quantidadeEncontradaTotal);
+      const byId = new Map(dist.map((d) => [d.id, d]));
+      if (previous) {
+        qc.setQueryData<DetalheCache>(key, {
+          ...previous,
+          itens: previous.itens.map((it) => {
+            const patch = byId.get(it.id);
+            if (!patch) return it;
+            return {
+              ...it,
+              quantidade_encontrada: patch.quantidade_encontrada,
+              status_conferencia: patch.status_conferencia,
+              status_etiqueta: input.statusEtiqueta ?? it.status_etiqueta,
+              metodo_conferencia: "quantidade",
+              conferido_em: now,
+            };
+          }),
+        });
+      }
+      return { previous, key };
+    },
     mutationFn: async (input: {
       inventarioId: string;
       itens: InventarioItem[];
@@ -381,54 +485,54 @@ export const useUpdateGrupoQuantidade = () => {
       statusEtiqueta?: StatusEtiqueta;
     }) => {
       const now = new Date().toISOString();
-      let restante = Math.max(0, Math.round(input.quantidadeEncontradaTotal));
+      const dist = calcularDistribuicaoGrupo(input.itens, input.quantidadeEncontradaTotal);
 
-      if (input.itens.length === 1) {
-        const item = input.itens[0]!;
-        const esperado = item.quantidade_esperada || 1;
-        const status: StatusConferencia =
-          restante === 0 ? "nao_encontrado" : restante === esperado ? "encontrado" : "divergencia";
-        const { error } = await supabase
-          .from("inventario_itens")
-          .update({
-            quantidade_encontrada: restante,
-            status_conferencia: status,
-            status_etiqueta: input.statusEtiqueta ?? item.status_etiqueta,
-            metodo_conferencia: "quantidade",
-            conferido_em: now,
-          })
-          .eq("id", item.id);
-        if (error) throw error;
-      } else {
-        // Distribui a quantidade encontrada entre os registros individuais do grupo
-        for (let i = 0; i < input.itens.length; i++) {
-          const item = input.itens[i]!;
-          const esperado = item.quantidade_esperada || 1;
-          const isLast = i === input.itens.length - 1;
-          const alocado = isLast ? restante : Math.min(esperado, restante);
-          restante = Math.max(0, restante - alocado);
-
-          const status: StatusConferencia =
-            alocado === 0 ? "nao_encontrado" : alocado === esperado ? "encontrado" : "divergencia";
-
-          const { error } = await supabase
-            .from("inventario_itens")
-            .update({
-              quantidade_encontrada: alocado,
-              status_conferencia: status,
-              status_etiqueta: input.statusEtiqueta ?? item.status_etiqueta,
-              metodo_conferencia: "quantidade",
-              conferido_em: now,
-            })
-            .eq("id", item.id);
-          if (error) throw error;
+      // Agrupa atualizações idênticas em lotes paralelos (.in) em vez de 1 requisição por item
+      const buckets = new Map<
+        string,
+        { ids: string[]; quantidade_encontrada: number; status_conferencia: StatusConferencia }
+      >();
+      for (const d of dist) {
+        const bKey = `${d.status_conferencia}:${d.quantidade_encontrada}`;
+        const existing = buckets.get(bKey);
+        if (existing) {
+          existing.ids.push(d.id);
+        } else {
+          buckets.set(bKey, {
+            ids: [d.id],
+            quantidade_encontrada: d.quantidade_encontrada,
+            status_conferencia: d.status_conferencia,
+          });
         }
       }
 
-      await syncResumoInventario(input.inventarioId);
+      await Promise.all(
+        Array.from(buckets.values()).map(async (bucket) => {
+          const payload: Record<string, unknown> = {
+            quantidade_encontrada: bucket.quantidade_encontrada,
+            status_conferencia: bucket.status_conferencia,
+            metodo_conferencia: "quantidade",
+            conferido_em: now,
+          };
+          if (input.statusEtiqueta) {
+            payload.status_etiqueta = input.statusEtiqueta;
+          }
+          const { error } = await supabase
+            .from("inventario_itens")
+            .update(payload)
+            .in("id", bucket.ids);
+          if (error) throw error;
+        }),
+      );
+
+      syncResumoFromCacheInBackground(qc, input.inventarioId);
     },
-    onSuccess: (_d, vars) => {
-      qc.invalidateQueries({ queryKey: ["inventario_detalhe", vars.inventarioId] });
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        qc.setQueryData(ctx.key, ctx.previous);
+      }
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["inventarios"] });
       qc.invalidateQueries({ queryKey: ["inventario_itens_all"] });
     },

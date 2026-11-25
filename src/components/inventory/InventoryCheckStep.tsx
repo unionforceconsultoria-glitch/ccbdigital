@@ -23,6 +23,7 @@ import {
   somenteAlfanumerico,
 } from "@/lib/inventoryUtils";
 import { useUpdateGrupoQuantidade, useUpdateInventarioItem } from "@/lib/inventoryStorage";
+import { playConfirmSound } from "@/lib/inventorySounds";
 import BarcodeScannerModal from "./BarcodeScannerModal";
 
 interface InventoryCheckStepProps {
@@ -58,7 +59,6 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
   const [scanEtiqueta, setScanEtiqueta] = useState<StatusEtiqueta>("presente_legivel");
   const [busca, setBusca] = useState("");
   const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
 
   const updateItem = useUpdateInventarioItem();
   const updateGrupo = useUpdateGrupoQuantidade();
@@ -98,55 +98,52 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
   const confirmarLeituraEtiqueta = async () => {
     if (!scanFeedback?.item) return;
     const item = scanFeedback.item;
-    setSavingId(item.id);
-    try {
-      await updateItem.mutateAsync({
-        itemId: item.id,
-        inventarioId: inventario.id,
-        status_conferencia: "encontrado",
-        status_etiqueta: scanEtiqueta,
-        quantidade_encontrada: item.quantidade_esperada || 1,
-        metodo_conferencia: "etiqueta",
-        observacoes: item.observacoes,
-      });
-      setScanFeedback({ type: "duplicate", code: scanFeedback.code, item: { ...item, status_conferencia: "encontrado", status_etiqueta: scanEtiqueta } });
-    } finally {
-      setSavingId(null);
-    }
+    playConfirmSound();
+    setScanFeedback({
+      type: "duplicate",
+      code: scanFeedback.code,
+      item: { ...item, status_conferencia: "encontrado", status_etiqueta: scanEtiqueta },
+    });
+    updateItem.mutate({
+      itemId: item.id,
+      inventarioId: inventario.id,
+      status_conferencia: "encontrado",
+      status_etiqueta: scanEtiqueta,
+      quantidade_encontrada: item.quantidade_esperada || 1,
+      metodo_conferencia: "etiqueta",
+      observacoes: item.observacoes,
+    });
   };
 
-  const salvarGrupoQuantidade = async (grupoKey: string, grupoItens: InventarioItem[], novaQtd: number) => {
-    setSavingId(grupoKey);
-    try {
-      await updateGrupo.mutateAsync({
-        inventarioId: inventario.id,
-        itens: grupoItens,
-        quantidadeEncontradaTotal: Math.max(0, novaQtd),
-      });
-    } finally {
-      setSavingId(null);
-    }
+  const salvarGrupoQuantidade = (grupoKey: string, grupoItens: InventarioItem[], novaQtd: number) => {
+    playConfirmSound();
+    setQtyDrafts((prev) => {
+      const next = { ...prev };
+      delete next[grupoKey];
+      return next;
+    });
+    updateGrupo.mutate({
+      inventarioId: inventario.id,
+      itens: grupoItens,
+      quantidadeEncontradaTotal: Math.max(0, novaQtd),
+    });
   };
 
-  const salvarItemManual = async (
+  const salvarItemManual = (
     item: InventarioItem,
     status: "encontrado" | "nao_encontrado",
     etiqueta: StatusEtiqueta,
   ) => {
-    setSavingId(item.id);
-    try {
-      await updateItem.mutateAsync({
-        itemId: item.id,
-        inventarioId: inventario.id,
-        status_conferencia: status,
-        status_etiqueta: status === "encontrado" ? etiqueta : item.status_etiqueta,
-        quantidade_encontrada: status === "encontrado" ? item.quantidade_esperada || 1 : 0,
-        metodo_conferencia: "manual",
-        observacoes: item.observacoes,
-      });
-    } finally {
-      setSavingId(null);
-    }
+    playConfirmSound();
+    updateItem.mutate({
+      itemId: item.id,
+      inventarioId: inventario.id,
+      status_conferencia: status,
+      status_etiqueta: status === "encontrado" ? etiqueta : item.status_etiqueta,
+      quantidade_encontrada: status === "encontrado" ? item.quantidade_esperada || 1 : 0,
+      metodo_conferencia: "manual",
+      observacoes: item.observacoes,
+    });
   };
 
   return (
@@ -225,7 +222,6 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
             const draftVal = qtyDrafts[g.grupo_chave];
             const currentVal = draftVal !== undefined ? Number(draftVal) : g.conferidos_count > 0 ? g.quantidade_encontrada : g.quantidade_esperada;
             const diff = currentVal - g.quantidade_esperada;
-            const isSaving = savingId === g.grupo_chave;
 
             return (
               <div key={g.grupo_chave} className="bg-card rounded-2xl card-shadow p-4 space-y-3">
@@ -263,7 +259,7 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
                         [g.grupo_chave]: String(Math.max(0, currentVal - 1)),
                       }))
                     }
-                    className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-foreground"
+                    className="w-10 h-11 rounded-xl bg-secondary flex items-center justify-center text-foreground shrink-0"
                     aria-label="Diminuir quantidade"
                   >
                     <Minus className="w-4 h-4" />
@@ -273,7 +269,7 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
                     min={0}
                     value={draftVal !== undefined ? draftVal : String(currentVal)}
                     onChange={(e) => setQtyDrafts((p) => ({ ...p, [g.grupo_chave]: e.target.value }))}
-                    className="flex-1 h-11 text-center font-bold text-base rounded-xl bg-secondary border border-border tabular-nums"
+                    className="flex-1 min-w-0 h-11 text-center font-bold text-base rounded-xl bg-secondary border border-border tabular-nums"
                     aria-label={`Quantidade encontrada de ${g.descricao}`}
                   />
                   <button
@@ -284,18 +280,21 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
                         [g.grupo_chave]: String(currentVal + 1),
                       }))
                     }
-                    className="w-11 h-11 rounded-xl bg-secondary flex items-center justify-center text-foreground"
+                    className="w-10 h-11 rounded-xl bg-secondary flex items-center justify-center text-foreground shrink-0"
                     aria-label="Aumentar quantidade"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
-                    disabled={isSaving}
                     onClick={() => salvarGrupoQuantidade(g.grupo_chave, g.itens, currentVal)}
-                    className="h-11 px-4 rounded-xl bg-primary text-primary-foreground text-xs font-bold shrink-0 disabled:opacity-50"
+                    className={`h-11 px-3 rounded-xl text-xs font-bold shrink-0 transition-all active:scale-95 ${
+                      g.todos_conferidos && draftVal === undefined
+                        ? "bg-success text-success-foreground"
+                        : "bg-primary text-primary-foreground"
+                    }`}
                   >
-                    {isSaving ? "..." : "CONFIRMAR"}
+                    {g.todos_conferidos && draftVal === undefined ? "OK ✓" : "CONFIRMAR"}
                   </button>
                 </div>
 
@@ -379,9 +378,8 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
 
                   <button
                     type="button"
-                    disabled={savingId === scanFeedback.item.id}
                     onClick={confirmarLeituraEtiqueta}
-                    className="w-full touch-target bg-success text-success-foreground font-bold rounded-xl text-sm flex items-center justify-center gap-2"
+                    className="w-full touch-target bg-success text-success-foreground font-bold rounded-xl text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-transform"
                   >
                     <CheckCircle2 className="w-5 h-5" />
                     CONFIRMAR PATRIMÔNIO ENCONTRADO
@@ -413,7 +411,6 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
 
           <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
             {itensFiltrados.map((item) => {
-              const isSaving = savingId === item.id;
               return (
                 <div key={item.id} className="bg-card rounded-2xl card-shadow p-4 space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
@@ -447,7 +444,6 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
                     <Tag className="w-4 h-4 text-muted-foreground shrink-0" />
                     <select
                       value={item.status_etiqueta}
-                      disabled={isSaving}
                       onChange={(e) =>
                         salvarItemManual(
                           item,
@@ -469,9 +465,8 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      disabled={isSaving}
                       onClick={() => salvarItemManual(item, "encontrado", item.status_etiqueta)}
-                      className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
                         item.status_conferencia === "encontrado"
                           ? "bg-success text-success-foreground"
                           : "bg-secondary text-foreground hover:bg-success/15"
@@ -482,9 +477,8 @@ const InventoryCheckStep: React.FC<InventoryCheckStepProps> = ({
                     </button>
                     <button
                       type="button"
-                      disabled={isSaving}
                       onClick={() => salvarItemManual(item, "nao_encontrado", item.status_etiqueta)}
-                      className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all ${
+                      className={`h-10 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 ${
                         item.status_conferencia === "nao_encontrado"
                           ? "bg-destructive text-destructive-foreground"
                           : "bg-secondary text-foreground hover:bg-destructive/15"

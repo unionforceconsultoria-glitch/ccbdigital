@@ -8,6 +8,7 @@ import {
   formatarDependenciasGrupo,
 } from "@/lib/inventoryUtils";
 import { uploadInventoryPdf, extrairItensDoPdf, useSaveExtractedItems } from "@/lib/inventoryStorage";
+import { extrairItensDoPdfLocal } from "@/lib/inventoryPdfParser";
 
 interface InventoryImportStepProps {
   inventario: InventarioRecord;
@@ -52,22 +53,34 @@ const InventoryImportStep: React.FC<InventoryImportStepProps> = ({ inventario, i
     setObsDoc(null);
     setLoadingPdf(true);
     try {
-      setStatusMsg("Salvando PDF original...");
-      const url = await uploadInventoryPdf(file, "originais", file.name);
-      setPdfUrl(url);
+      setStatusMsg("Lendo PDF...");
       setPdfNome(file.name);
 
-      setStatusMsg("Lendo texto e aplicando OCR no inventário...");
-      const useBase64 = file.size <= 4 * 1024 * 1024;
-      const payload = useBase64
-        ? { fileBase64: await fileToBase64(file), filename: file.name }
-        : { fileUrl: url, filename: file.name };
+      // Inicia o upload em paralelo enquanto tenta a leitura local instantânea
+      const uploadPromise = uploadInventoryPdf(file, "originais", file.name);
+      const localResult = await extrairItensDoPdfLocal(file);
 
-      const result = await extrairItensDoPdf(payload);
-      setItens(result.itens);
-      setObsDoc(result.observacoes_documento);
-      if (result.itens.length === 0) {
-        setError("Nenhum bem foi identificado automaticamente no PDF. Você pode adicionar os itens manualmente abaixo.");
+      if (localResult.itens.length > 0) {
+        setItens(localResult.itens);
+        setObsDoc(localResult.observacoes_documento);
+        const url = await uploadPromise;
+        setPdfUrl(url);
+      } else {
+        setStatusMsg("Aplicando OCR no PDF digitalizado...");
+        const url = await uploadPromise;
+        setPdfUrl(url);
+
+        const useBase64 = file.size <= 4 * 1024 * 1024;
+        const payload = useBase64
+          ? { fileBase64: await fileToBase64(file), filename: file.name }
+          : { fileUrl: url, filename: file.name };
+
+        const result = await extrairItensDoPdf(payload);
+        setItens(result.itens);
+        setObsDoc(result.observacoes_documento);
+        if (result.itens.length === 0) {
+          setError("Nenhum bem foi identificado automaticamente no PDF. Você pode adicionar os itens manualmente abaixo.");
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao processar o PDF.");
